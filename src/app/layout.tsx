@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Inter, Poppins } from "next/font/google";
 import "./globals.css";
-import DevPanel from "@/components/shared/dev-panel";
 import { AuthProvider } from "@/context/AuthContext";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -71,7 +70,6 @@ export default function RootLayout({
       <body className="font-[var(--font-body)] antialiased">
         <AuthProvider>
           {children}
-          <DevPanel />
         </AuthProvider>
       </body>
     </html>

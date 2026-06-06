@@ -30,11 +30,11 @@ export default function TopAppBar({
   onSearchClick,
 }: TopAppBarProps) {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const { setTheme, isDark } = useTheme();
   const { user } = useAuth();
 
   const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    setTheme(isDark ? "light" : "dark");
   };
 
   return (
@@ -76,7 +76,7 @@ export default function TopAppBar({
           title="Toggle Theme"
         >
           <span className="material-symbols-outlined">
-            {theme === "dark" ? "light_mode" : "dark_mode"}
+            {isDark ? "light_mode" : "dark_mode"}
           </span>
         </button>
         {showSearch && (

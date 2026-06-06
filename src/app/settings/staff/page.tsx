@@ -421,7 +421,7 @@ export default function StaffManagementPage() {
                 return (
                   <div
                     key={staff.id}
-                    className={`bg-white border border-outline-variant/40 rounded-xl p-[16px] shadow-[0_4px_12px_rgba(0,0,0,0.03)] space-y-[16px] ${
+                    className={`bg-surface border border-outline-variant/40 rounded-xl p-[16px] shadow-[0_4px_12px_rgba(0,0,0,0.03)] space-y-[16px] ${
                       !staff.isActive ? "bg-surface-container-low opacity-70 grayscale" : ""
                     }`}
                   >
@@ -519,7 +519,7 @@ export default function StaffManagementPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center bg-white/50 rounded p-[12px]">
+                      <div className="text-center bg-surface-container-low/50 rounded p-[12px]">
                         <p className="font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium text-error">
                           Access Disabled
                         </p>

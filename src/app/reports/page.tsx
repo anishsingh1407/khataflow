@@ -216,6 +216,7 @@ export default function ReportsDashboardPage() {
   }, [allTransactions, allCustomers, startDate, endDate]);
 
   const generateDailyPDF = async () => {
+    console.log("Generating daily PDF...");
     const today = new Date().toISOString().split("T")[0];
     const todayTxns = allTransactions.filter((t) => t.date === today);
     if (todayTxns.length === 0) {
@@ -527,6 +528,7 @@ export default function ReportsDashboardPage() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={generateDailyPDF}
                 disabled={isGeneratingDailyPDF}
                 className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-primary text-on-primary rounded-xl font-semibold text-[13px] hover:brightness-110 active:scale-95 transition-all shadow disabled:opacity-50 disabled:active:scale-100"

@@ -1,80 +1,60 @@
-"use client";
+'use client';
+import { createContext, useContext, useEffect, useState } from 'react';
 
-import { createContext, useContext, useEffect, useState } from "react";
-
-export type Theme = "light" | "dark" | "system";
+export type Theme = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  isDark: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: "system",
+  theme: 'light',
   setTheme: () => {},
+  isDark: false,
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
+  const [theme, setThemeState] = useState<Theme>('light');
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("kf-theme") as Theme | null;
-    if (savedTheme) {
-      setThemeState(savedTheme);
-    }
+    // Read saved theme from localStorage
+    const saved = localStorage.getItem('kf-theme') as Theme || 'light';
+    setThemeState(saved);
+    applyTheme(saved);
   }, []);
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem("kf-theme", newTheme);
-    
+  const applyTheme = (t: Theme) => {
     const root = document.documentElement;
-    if (newTheme === "dark") {
-      root.classList.add("dark");
-    } else if (newTheme === "light") {
-      root.classList.remove("dark");
+    if (t === 'dark') {
+      root.classList.add('dark');
+      setIsDark(true);
+    } else if (t === 'light') {
+      root.classList.remove('dark');
+      setIsDark(false);
     } else {
-      const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (systemDark) {
-        root.classList.add("dark");
+      // system
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        root.classList.add('dark');
+        setIsDark(true);
       } else {
-        root.classList.remove("dark");
+        root.classList.remove('dark');
+        setIsDark(false);
       }
     }
   };
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    
-    const handleChange = () => {
-      if (theme === "system") {
-        if (mediaQuery.matches) {
-          root.classList.add("dark");
-        } else {
-          root.classList.remove("dark");
-        }
-      }
-    };
-
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else if (theme === "light") {
-      root.classList.remove("dark");
-    } else {
-      if (mediaQuery.matches) {
-        root.classList.add("dark");
-      } else {
-        root.classList.remove("dark");
-      }
-    }
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [theme]);
+  const setTheme = (t: Theme) => {
+    localStorage.setItem('kf-theme', t);
+    setThemeState(t);
+    applyTheme(t);
+  };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, isDark }}>
       {children}
     </ThemeContext.Provider>
   );

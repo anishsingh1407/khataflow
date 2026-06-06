@@ -21,7 +21,7 @@ export default function SplashPage() {
         <div
           className="relative mb-[24px] animate-[fade-in-up_0.8s_ease-out_0.1s_forwards] opacity-0"
         >
-          <div className="w-40 h-40 md:w-48 md:h-48 rounded-3xl overflow-hidden bg-white flex items-center justify-center shadow-sm">
+          <div className="w-40 h-40 md:w-48 md:h-48 rounded-3xl overflow-hidden bg-surface flex items-center justify-center shadow-sm">
             <img
               alt="KhataFlow Logo"
               className="w-full h-full object-contain p-4"

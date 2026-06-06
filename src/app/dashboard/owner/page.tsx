@@ -10,7 +10,7 @@ import TopAppBar from "@/components/layout/top-app-bar";
 import BottomNav from "@/components/layout/bottom-nav";
 import FAB from "@/components/layout/fab";
 import ActivityItem from "@/components/shared/activity-item";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatPhoneNumber } from "@/lib/utils";
 import Link from "next/link";
 import { Customer, Transaction } from "@/lib/types";
 
@@ -25,6 +25,9 @@ export default function OwnerDashboardPage() {
   const [shopName, setShopName] = useState("Loading shop...");
   const [ownerName, setOwnerName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
     console.log("Dashboard - user from useAuth:", user);
@@ -97,6 +100,37 @@ export default function OwnerDashboardPage() {
     loadDashboardData();
   }, [shopId, authLoading, user, router]);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsSearchOpen(false);
+        setSearchQuery("");
+      }
+    };
+    if (isSearchOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSearchOpen]);
+
+  const filteredResults = customers.filter((c) => {
+    const queryStr = debouncedQuery.toLowerCase().trim();
+    if (!queryStr) return false;
+    return (
+      c.name.toLowerCase().includes(queryStr) ||
+      c.phone.toLowerCase().includes(queryStr)
+    );
+  });
+
   // Derived states (with safety checks for missing fields)
   const totalPending = customers.reduce((sum, c) => sum + (c.balance || 0), 0);
   const totalCustomers = customers.length;
@@ -131,6 +165,7 @@ export default function OwnerDashboardPage() {
         title={shopName}
         showLogo
         showSearch
+        onSearchClick={() => setIsSearchOpen(true)}
         showProfile
         profileImageUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDQQTTjDhMT-Z0xyJPRLYKw4sN2MbpO2ViNqFU8NH9nd-4KvfbyfMoeQniHEWXjsz9veIH93Nv4O_JMgCJy7EKM6_unj95r1zdgtOqfSbxGs3K4et1c3RY8qLTT3j-tcWE30NYpb4LIvR6oxMq5mmj2huwlrBVWAA_awPZ1nsWw9nrJmDwLqAhzIaiKt6DKQ2huvoYVJumsb5QasoTE6lYUe8Ybt2eeFl4IYVmM0C4u8AniKMVNtfZuiK7PYCfqq95BZ0iaFIaAnrNt"
       />
@@ -270,7 +305,7 @@ export default function OwnerDashboardPage() {
             </Link>
             <Link
               href="/transactions/add-payment"
-              className="flex items-center gap-[12px] bg-white border border-primary text-primary px-[24px] py-[12px] rounded-full font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold active:scale-95 transition-transform"
+              className="flex items-center gap-[12px] bg-white dark:bg-surface-container-lowest border border-primary text-primary px-[24px] py-[12px] rounded-full font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold active:scale-95 transition-transform"
             >
               <span className="material-symbols-outlined">payments</span>
               Add Payment
@@ -372,6 +407,87 @@ export default function OwnerDashboardPage() {
 
       <FAB href="/transactions/add-udhar" />
       <BottomNav variant="owner" />
+
+      {/* Search Overlay */}
+      {isSearchOpen && (
+        <div className="fixed inset-0 bg-background/98 z-[100] flex flex-col animate-fade-in">
+          {/* Search Header */}
+          <div className="flex items-center gap-3 px-4 h-14 border-b border-outline-variant/30 bg-surface">
+            <button
+              onClick={() => {
+                setIsSearchOpen(false);
+                setSearchQuery("");
+              }}
+              className="w-10 h-10 rounded-full hover:bg-surface-container-high flex items-center justify-center text-primary animate-fade-in"
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <input
+              type="text"
+              placeholder="Search by name or phone number..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+              className="flex-1 bg-transparent border-none focus:outline-none text-[16px] font-[var(--font-body)] text-on-surface placeholder:text-outline-variant"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="w-8 h-8 rounded-full hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            )}
+          </div>
+
+          {/* Results List */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 max-w-md mx-auto w-full">
+            {!debouncedQuery ? (
+              <div className="flex flex-col items-center justify-center py-16 text-on-surface-variant gap-2 text-center">
+                <span className="material-symbols-outlined text-[48px] text-outline">search</span>
+                <p className="font-medium text-[14px]">Start typing to search customers...</p>
+              </div>
+            ) : filteredResults.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-on-surface-variant gap-2 text-center">
+                <span className="material-symbols-outlined text-[48px] text-outline">search_off</span>
+                <p className="font-medium text-[14px]">No customers found for &apos;{debouncedQuery}&apos;</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[12px] font-semibold text-on-surface-variant uppercase px-1">
+                  Search Results ({filteredResults.length})
+                </p>
+                {filteredResults.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      setIsSearchOpen(false);
+                      setSearchQuery("");
+                      router.push(`/customers/${c.id}`);
+                    }}
+                    className="w-full bg-surface-container-lowest p-4 rounded-xl border border-outline-variant flex items-center justify-between hover:shadow-md transition-all text-left animate-fade-in-up"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${c.avatarColor || "bg-primary/10 text-primary"}`}>
+                        {c.initials}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-on-surface">{c.name}</h4>
+                        <p className="text-xs text-on-surface-variant">{formatPhoneNumber(c.phone)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-bold ${c.balance > 0 ? "text-error" : "text-primary"}`}>
+                        {formatCurrency(c.balance || 0)}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

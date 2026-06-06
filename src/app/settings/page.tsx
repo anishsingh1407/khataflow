@@ -4,6 +4,7 @@ import BottomNav from "@/components/layout/bottom-nav";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTheme, Theme } from "@/context/ThemeContext";
 
 interface SettingsItem {
   icon: string;
@@ -155,12 +156,27 @@ function SettingsGroup({
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isThemeSheetOpen, setIsThemeSheetOpen] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState("");
 
+  const themeLabel = theme === "dark" ? "Dark mode" : theme === "light" ? "Light mode" : "System default";
+
+  const dynamicGeneralSection = generalSection.map((item) => {
+    if (item.label === "Appearance") {
+      return { ...item, description: themeLabel };
+    }
+    return item;
+  });
+
   const handleItemClick = (item: SettingsItem) => {
-    setSelectedFeature(item.label);
-    setIsModalOpen(true);
+    if (item.label === "Appearance") {
+      setIsThemeSheetOpen(true);
+    } else {
+      setSelectedFeature(item.label);
+      setIsModalOpen(true);
+    }
   };
 
   return (
@@ -212,7 +228,7 @@ export default function SettingsPage() {
         </section>
 
         <SettingsGroup title="Shop & Team" items={profileSection} onItemClick={handleItemClick} />
-        <SettingsGroup title="General" items={generalSection} onItemClick={handleItemClick} />
+        <SettingsGroup title="General" items={dynamicGeneralSection} onItemClick={handleItemClick} />
         <SettingsGroup title="Data & Reports" items={dataSection} onItemClick={handleItemClick} />
         <SettingsGroup title="Support" items={supportSection} onItemClick={handleItemClick} />
 
@@ -267,6 +283,65 @@ export default function SettingsPage() {
               className="w-full h-12 bg-primary text-on-primary rounded-full font-semibold font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] shadow-sm hover:brightness-95 active:scale-[0.98] transition-all"
             >
               Got it, thanks
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Theme Picker Bottom Sheet */}
+      {isThemeSheetOpen && (
+        <div
+          className="fixed inset-0 bg-black/55 backdrop-blur-sm z-[100] flex items-end justify-center transition-opacity duration-300"
+          onClick={() => setIsThemeSheetOpen(false)}
+        >
+          <div
+            className="bg-surface text-on-surface w-full max-w-md rounded-t-3xl p-6 pb-8 shadow-2xl flex flex-col items-center border-t border-outline-variant/20 z-[101] animate-slide-up transform translate-y-0 transition-transform duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drag handle pill */}
+            <div className="w-12 h-1.5 bg-outline-variant/60 rounded-full mb-6" />
+
+            <h3 className="font-[var(--font-heading)] text-[20px] leading-[28px] font-bold text-on-surface mb-4 self-start pl-1">
+              Choose Theme
+            </h3>
+
+            <div className="w-full flex flex-col gap-2 mb-6">
+              {[
+                { id: "light" as Theme, label: "Light mode", icon: "light_mode" },
+                { id: "dark" as Theme, label: "Dark mode", icon: "dark_mode" },
+                { id: "system" as Theme, label: "System default", icon: "settings_suggest" },
+              ].map((opt) => {
+                const isSelected = theme === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => {
+                      setTheme(opt.id);
+                      setIsThemeSheetOpen(false);
+                    }}
+                    className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-outline-variant/30 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined">{opt.icon}</span>
+                      <span className="font-semibold text-[14px]">{opt.label}</span>
+                    </div>
+                    {isSelected && (
+                      <span className="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setIsThemeSheetOpen(false)}
+              className="w-full h-12 bg-primary text-on-primary rounded-full font-semibold font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px]"
+            >
+              Cancel
             </button>
           </div>
         </div>

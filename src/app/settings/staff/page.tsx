@@ -18,7 +18,7 @@ import {
 import TopAppBar from "@/components/layout/top-app-bar";
 import BottomNav from "@/components/layout/bottom-nav";
 import FAB from "@/components/layout/fab";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatPhoneNumber } from "@/lib/utils";
 import Link from "next/link";
 
 interface StaffMember {
@@ -464,7 +464,7 @@ export default function StaffManagementPage() {
                             </span>
                           </div>
                           <p className="font-[var(--font-body)] text-[14px] leading-[20px] text-on-surface-variant">
-                            {staff.phone}
+                            {formatPhoneNumber(staff.phone)}
                           </p>
                         </div>
                       </div>

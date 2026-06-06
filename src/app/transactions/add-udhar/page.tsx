@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getCustomers, addTransaction, updateCustomerBalance } from "@/lib/firestore-service";
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatPhoneNumber } from "@/lib/utils";
 import { Customer } from "@/lib/types";
 
 interface UdharItem {
@@ -25,9 +25,21 @@ export default function AddUdharPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [shopName, setShopName] = useState("My General Store");
+  const [ownerName, setOwnerName] = useState("Owner");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successData, setSuccessData] = useState<{
+    customerId: string;
+    customerName: string;
+    phone: string;
+    amount: number;
+    newBalance: number;
+    previousBalance: number;
+    itemsList: string;
+    date: string;
+  } | null>(null);
+  const [countdown, setCountdown] = useState(5);
   
   const [items, setItems] = useState<UdharItem[]>([
     { id: 1, productName: "", price: "", quantity: 1 },
@@ -52,7 +64,9 @@ export default function AddUdharPage() {
       try {
         const shopSnap = await getDoc(doc(db, "shops", shopId));
         if (shopSnap.exists()) {
-          setShopName(shopSnap.data().name || "My General Store");
+          const shopData = shopSnap.data();
+          setShopName(shopData.name || "My General Store");
+          setOwnerName(shopData.ownerName || "Owner");
         }
 
         const customerList = await getCustomers(shopId);
@@ -64,6 +78,22 @@ export default function AddUdharPage() {
 
     loadPageData();
   }, [shopId, authLoading, user, router]);
+
+  useEffect(() => {
+    if (!successData) return;
+    setCountdown(5);
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          router.push(`/customers/${successData.customerId}`);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [successData, router]);
 
   const total = items.reduce(
     (sum, item) => sum + (parseFloat(item.price) || 0) * item.quantity,
@@ -151,14 +181,33 @@ export default function AddUdharPage() {
 
       await updateCustomerBalance(shopId, selectedCustomer, newBalance, newStatus);
 
-      // Reset fields upon successful submit
+      // 3. Store data in successData to trigger success sheet
       const targetCustomer = selectedCustomer;
+      const dateFormatted = today.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+
+      const itemsListStr = activeItems
+        .map((i) => `${i.quantity}x ${i.productName.trim()} (₹${i.price})`)
+        .join("\n");
+
+      setSuccessData({
+        customerId: targetCustomer,
+        customerName: selectedCustObj?.name || "Customer",
+        phone: selectedCustObj?.phone || "",
+        amount: total,
+        newBalance: newBalance,
+        previousBalance: currentBalance,
+        itemsList: itemsListStr,
+        date: dateFormatted,
+      });
+
+      // Reset fields upon successful submit
       setSelectedCustomer(null);
       setSearchQuery("");
       setItems([{ id: 1, productName: "", price: "", quantity: 1 }]);
-
-      // 3. Redirect to customer's ledger screen
-      router.push(`/customers/${targetCustomer}`);
     } catch (err: any) {
       console.error("Error saving udhar:", err);
       setError(err.message || "Failed to record transaction. Please try again.");
@@ -167,11 +216,13 @@ export default function AddUdharPage() {
     }
   };
 
-  const filteredCustomers = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
-  );
+  const filteredCustomers = customers.filter((c) => {
+    const query = searchQuery.toLowerCase().trim();
+    return (
+      c.name.toLowerCase().includes(query) ||
+      c.phone.toLowerCase().includes(query)
+    );
+  });
 
   const selectedCustObj = customers.find((c) => c.id === selectedCustomer);
 
@@ -211,7 +262,7 @@ export default function AddUdharPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-[14px]">{selectedCustObj?.name}</p>
-                  <p className="text-[12px] opacity-80">{selectedCustObj?.phone}</p>
+                  <p className="text-[12px] opacity-80">{formatPhoneNumber(selectedCustObj?.phone || "")}</p>
                 </div>
               </div>
               <button
@@ -243,7 +294,7 @@ export default function AddUdharPage() {
               <div className="flex gap-[12px] overflow-x-auto no-scrollbar pb-1">
                 {filteredCustomers.length === 0 ? (
                   <p className="text-[12px] italic text-on-surface-variant py-4 px-2">
-                    No matching customers found.
+                    No customers found.
                   </p>
                 ) : (
                   filteredCustomers.map((c) => {
@@ -477,6 +528,75 @@ export default function AddUdharPage() {
           </button>
         </div>
       </main>
+
+      {/* Success Bottom Sheet */}
+      {successData && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-end justify-center animate-fade-in p-4">
+          <div className="bg-surface-container-lowest w-full max-w-md rounded-2xl p-6 space-y-6 shadow-2xl border border-outline-variant/30 animate-slide-up flex flex-col items-center">
+            {/* Green Check Animation/Icon */}
+            <div className="w-16 h-16 rounded-full bg-[#006b2c]/10 text-[#006b2c] flex items-center justify-center mb-2">
+              <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            </div>
+            
+            <div className="text-center space-y-2 w-full">
+              <h2 className="font-[var(--font-heading)] text-[24px] leading-[32px] font-bold text-[#006b2c]">
+                ✅ Udhar saved!
+              </h2>
+              <p className="font-[var(--font-body)] text-[14px] leading-[20px] text-on-surface-variant">
+                Recorded udhar of <span className="font-semibold text-on-surface">{formatCurrency(successData.amount)}</span> for {successData.customerName}.
+              </p>
+            </div>
+
+            {/* Receipt Preview */}
+            <div className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl p-4 space-y-2 text-left text-[13px] leading-[18px] text-on-surface-variant relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-2 opacity-[0.03] pointer-events-none">
+                <span className="material-symbols-outlined text-[100px]">receipt_long</span>
+              </div>
+              <div className="flex justify-between border-b border-outline-variant/20 pb-2 mb-2">
+                <span className="font-semibold text-primary">Receipt Preview</span>
+                <span className="text-[11px] text-outline">{successData.date}</span>
+              </div>
+              <p className="font-mono whitespace-pre-wrap">
+                Namaste {successData.customerName} ji 🙏
+                {"\n\n"}🛒 Aaj ka udhar ({successData.date}):
+                {"\n"}{successData.itemsList}
+                {"\n"}Aaj ka total: ₹{successData.amount}
+                {"\n\n"}📊 Pichla baaki: ₹{successData.previousBalance}
+                {"\n"}💰 Ab kul baaki: ₹{successData.newBalance}
+                {"\n\n"}- {shopName}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="w-full flex flex-col gap-3 pt-2">
+              <button
+                onClick={() => {
+                  const message = `Namaste ${successData.customerName} ji 🙏\n\n🛒 Aaj ka udhar (${successData.date}):\n${successData.itemsList}\nAaj ka total: ₹${successData.amount}\n\n📊 Pichla baaki: ₹${successData.previousBalance}\n💰 Ab kul baaki: ₹${successData.newBalance}\n\n- ${shopName}`;
+                  const cleanPhone = successData.phone.replace(/\D/g, "");
+                  const last10 = cleanPhone.slice(-10);
+                  window.open(`https://wa.me/91${last10}?text=${encodeURIComponent(message)}`, "_blank");
+                  
+                  // Redirect to ledger
+                  router.push(`/customers/${successData.customerId}`);
+                }}
+                className="w-full h-12 bg-[#25D366] text-white hover:bg-[#20ba5a] rounded-xl font-semibold text-[14px] shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>chat</span>
+                Send WhatsApp Receipt
+              </button>
+              
+              <button
+                onClick={() => {
+                  router.push(`/customers/${successData.customerId}`);
+                }}
+                className="w-full text-center text-on-surface-variant hover:text-on-surface py-2 text-[14px] font-semibold transition-all"
+              >
+                Skip ({countdown}s)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

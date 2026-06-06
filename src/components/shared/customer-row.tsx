@@ -13,6 +13,7 @@ interface CustomerRowProps {
   lastUpdated: string;
   avatarColor?: string;
   href?: string;
+  onWhatsAppClick?: (e: React.MouseEvent) => void;
 }
 
 const statusVariantMap: Record<CustomerStatus, "overdue" | "pending" | "settled" | "active"> = {
@@ -31,6 +32,7 @@ export default function CustomerRow({
   lastUpdated,
   avatarColor,
   href,
+  onWhatsAppClick,
 }: CustomerRowProps) {
   const content = (
     <div className="bg-surface-container-lowest p-[16px] rounded-xl border border-outline-variant/30 flex items-center justify-between hover:shadow-md transition-all active:scale-[0.99]">
@@ -55,7 +57,20 @@ export default function CustomerRow({
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        {balance > 0 && onWhatsAppClick && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onWhatsAppClick(e);
+            }}
+            className="w-8 h-8 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center hover:bg-[#25D366]/20 transition-colors active:scale-90"
+            title="Send WhatsApp Reminder"
+          >
+            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>chat</span>
+          </button>
+        )}
         <span
           className={`font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold ${
             balance > 0 ? "text-error" : "text-on-surface"

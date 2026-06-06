@@ -6,9 +6,174 @@ import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { getCustomers, getCustomerTransactions } from "@/lib/firestore-service";
-import { formatCurrencyFull } from "@/lib/utils";
+import { formatCurrencyFull, formatPhoneNumber } from "@/lib/utils";
 import Link from "next/link";
 import { Customer, Transaction } from "@/lib/types";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+
+export function generateStatementPDF({
+  customer,
+  transactions,
+  shopDetails,
+  startDateStr,
+  endDateStr,
+}: {
+  customer: Customer;
+  transactions: Transaction[];
+  shopDetails: any;
+  startDateStr?: string;
+  endDateStr?: string;
+}) {
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
+
+  // Sort transactions chronologically
+  const chronTxns = [...transactions].sort((a, b) => {
+    const dateCompare = (a.date || "").localeCompare(b.date || "");
+    if (dateCompare !== 0) return dateCompare;
+    return (a.time || "").localeCompare(b.time || "");
+  });
+
+  const totalUdhar = transactions.filter((t) => t.type === "udhar").reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalPaid = transactions.filter((t) => t.type === "payment").reduce((sum, t) => sum + (t.amount || 0), 0);
+  const netBalance = customer.balance || 0;
+
+  // 1. Header Section
+  doc.setTextColor(27, 94, 32); // #1B5E20
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.text(shopDetails?.name || "KhataFlow Shop", 14, 20);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(102, 102, 102);
+  doc.text(shopDetails?.address || "Shop Address", 14, 25);
+  doc.text(`Contact: ${shopDetails?.phone || ""}`, 14, 30);
+  doc.text(`Owner: ${shopDetails?.ownerName || ""}`, 14, 35);
+
+  doc.setTextColor(27, 94, 32);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("ACCOUNT STATEMENT", 140, 20);
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(102, 102, 102);
+  const generatedOn = new Date().toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }) + " " + new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+  doc.text(`Generated: ${generatedOn}`, 140, 25);
+
+  // Line divider
+  doc.setDrawColor(200, 200, 200);
+  doc.line(14, 40, 196, 40);
+
+  // 2. Customer Info Section
+  doc.setTextColor(51, 51, 51);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("Customer Details:", 14, 48);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(`Name: ${customer.name}`, 14, 54);
+  doc.text(`Phone: ${customer.phone ? formatPhoneNumber(customer.phone) : ""}`, 14, 60);
+
+  // Statement Period
+  let periodText = "";
+  if (startDateStr || endDateStr) {
+    const startStr = startDateStr ? new Date(startDateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start";
+    const endStr = endDateStr ? new Date(endDateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "End";
+    periodText = `${startStr} to ${endStr}`;
+  } else {
+    const now = new Date();
+    const currentMonthName = now.toLocaleString("en-US", { month: "long", year: "numeric" });
+    periodText = currentMonthName;
+  }
+  doc.text(`Statement Period: ${periodText}`, 14, 66);
+
+  // 3. Summary Box
+  doc.setFillColor(240, 245, 240);
+  doc.roundedRect(120, 45, 76, 25, 2, 2, "F");
+  doc.setTextColor(51, 51, 51);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("SUMMARY", 124, 50);
+
+  doc.setFont("helvetica", "normal");
+  doc.text(`Total Udhar:`, 124, 55);
+  doc.text(`Total Paid:`, 124, 60);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Net Balance:`, 124, 65);
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(211, 47, 47); // red
+  doc.text(`₹${totalUdhar}`, 160, 55);
+  doc.setTextColor(46, 125, 50); // green
+  doc.text(`₹${totalPaid}`, 160, 60);
+  doc.setTextColor(27, 94, 32); // deep green
+  doc.setFont("helvetica", "bold");
+  doc.text(`₹${netBalance < 0 ? 0 : netBalance}`, 160, 65);
+
+  // 4. Table data using autoTable
+  let currentRunning = 0;
+  const tableData = chronTxns.map((t) => {
+    const debit = t.type === "payment" ? t.amount : 0;
+    const credit = t.type === "udhar" ? t.amount : 0;
+    currentRunning = currentRunning - debit + credit;
+    const formattedDate = t.date ? new Date(t.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" }) : "";
+    return [
+      formattedDate,
+      t.description || (t.type === "udhar" ? "Udhar Given" : "Payment Received"),
+      debit > 0 ? `₹${debit}` : "-",
+      credit > 0 ? `₹${credit}` : "-",
+      `₹${currentRunning}`,
+    ];
+  });
+
+  (doc as any).autoTable({
+    startY: 75,
+    head: [["Date", "Particulars", "Debit (₹)", "Credit (₹)", "Balance (₹)"]],
+    body: tableData,
+    theme: "grid",
+    headStyles: {
+      fillColor: [27, 94, 32],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+    },
+    alternateRowStyles: {
+      fillColor: [249, 249, 249],
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+    },
+    columnStyles: {
+      2: { halign: "right" },
+      3: { halign: "right" },
+      4: { halign: "right" },
+    },
+  });
+
+  // 5. Footer
+  const finalY = (doc as any).lastAutoTable.finalY + 15;
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.setFont("helvetica", "italic");
+  doc.text("Generated by KhataFlow - Manage your business finance efficiently.", 14, finalY);
+
+  doc.setFont("helvetica", "normal");
+  doc.text(`Shop Owner: ${shopDetails?.ownerName || ""}`, 140, finalY);
+  doc.text(`Date: ${new Date().toLocaleDateString("en-IN")}`, 140, finalY + 4);
+
+  return doc;
+}
 
 function StatementPreview() {
   const router = useRouter();
@@ -140,7 +305,7 @@ function StatementPreview() {
                     </div>
                     <div>
                       <h4 className="font-semibold text-on-surface">{c.name}</h4>
-                      <p className="text-xs text-on-surface-variant">+91 {c.phone}</p>
+                      <p className="text-xs text-on-surface-variant">{formatPhoneNumber(c.phone)}</p>
                     </div>
                   </div>
                   <span className="material-symbols-outlined text-primary">arrow_forward</span>
@@ -180,20 +345,71 @@ function StatementPreview() {
   const todayStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + 15);
-  const nextDueDateStr = dueDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
 
   const upiId = shopDetails?.upiId || (shopDetails?.phone ? `${shopDetails.phone}@upi` : "shop@upi");
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
     `upi://pay?pa=${upiId}&pn=${encodeURIComponent(shopDetails?.name || "KhataFlow Shop")}&am=${netBalance > 0 ? netBalance : 0}&cu=INR`
   )}`;
 
-  const handleShareWhatsApp = () => {
+  const handleShare = async () => {
     if (!selectedCustomer) return;
-    const text = `Hello ${selectedCustomer.name}, please find your statement for ${shopDetails?.name || "our shop"}. Total pending outstanding balance is ₹${selectedCustomer.balance || 0}. You can pay directly using UPI: ${upiId}. Thank you!`;
-    const url = `https://wa.me/+91${selectedCustomer.phone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
-    window.open(url, "_blank");
+    try {
+      const now = new Date();
+      const currentMonthName = now.toLocaleString("en-US", { month: "long" });
+      const currentYear = now.getFullYear();
+      const fileName = `${selectedCustomer.name}-${currentMonthName}-${currentYear}-statement.pdf`;
+      const doc = generateStatementPDF({
+        customer: selectedCustomer,
+        transactions,
+        shopDetails,
+      });
+
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({
+          files: [new File([new Blob()], "a.pdf", { type: "application/pdf" })],
+        })
+      ) {
+        const blob = doc.output("blob");
+        const file = new File([blob], fileName, { type: "application/pdf" });
+        await navigator.share({
+          title: "Account Statement",
+          text: `Hello ${selectedCustomer.name}, please find your statement for ${shopDetails?.name || "our shop"}. Total pending outstanding balance is ₹${selectedCustomer.balance || 0}.`,
+          files: [file],
+        });
+      } else {
+        doc.save(fileName);
+        const upiId = shopDetails?.upiId || (shopDetails?.phone ? `${shopDetails.phone}@upi` : "shop@upi");
+        const text = `Hello ${selectedCustomer.name}, please find your statement for ${shopDetails?.name || "our shop"}. Total pending outstanding balance is ₹${selectedCustomer.balance || 0}. You can pay directly using UPI: ${upiId}. Thank you!`;
+        const cleanPhone = selectedCustomer.phone.replace(/\D/g, "");
+        const last10 = cleanPhone.slice(-10);
+        window.open(`https://wa.me/91${last10}?text=${encodeURIComponent(text)}`, "_blank");
+      }
+    } catch (err) {
+      console.error("Error sharing PDF statement:", err);
+      const upiId = shopDetails?.upiId || (shopDetails?.phone ? `${shopDetails.phone}@upi` : "shop@upi");
+      const text = `Hello ${selectedCustomer.name}, please find your statement for ${shopDetails?.name || "our shop"}. Total pending outstanding balance is ₹${selectedCustomer.balance || 0}. You can pay directly using UPI: ${upiId}. Thank you!`;
+      const cleanPhone = selectedCustomer.phone.replace(/\D/g, "");
+      const last10 = cleanPhone.slice(-10);
+      window.open(`https://wa.me/91${last10}?text=${encodeURIComponent(text)}`, "_blank");
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!selectedCustomer) return;
+    const now = new Date();
+    const currentMonthName = now.toLocaleString("en-US", { month: "long" });
+    const currentYear = now.getFullYear();
+    const fileName = `${selectedCustomer.name}-${currentMonthName}-${currentYear}-statement.pdf`;
+    const doc = generateStatementPDF({
+      customer: selectedCustomer,
+      transactions,
+      shopDetails,
+    });
+    doc.save(fileName);
   };
 
   return (
@@ -232,7 +448,7 @@ function StatementPreview() {
                 <p className="text-on-surface-variant">{shopDetails?.address || "Shop Address"}</p>
                 <p className="text-on-surface-variant">Owner: {shopDetails?.ownerName || "Ramesh"}</p>
                 <p className="text-on-surface-variant font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold">
-                  Contact: +91 {shopDetails?.phone || "Phone"}
+                  Contact: {formatPhoneNumber(shopDetails?.phone || "")}
                 </p>
               </div>
               <div className="text-left space-y-[4px]">
@@ -240,13 +456,10 @@ function StatementPreview() {
                   Account Statement
                 </div>
                 <p className="font-semibold text-on-surface mt-2 text-[14px]">
-                  Customer: {selectedCustomer?.name} (+91 {selectedCustomer?.phone})
+                  Customer: {selectedCustomer?.name} ({formatPhoneNumber(selectedCustomer?.phone || "")})
                 </p>
                 <p className="text-on-surface-variant font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium pt-2">Date: {todayStr}</p>
                 <p className="text-on-surface-variant font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium">Time: {timeStr}</p>
-                {netBalance > 0 && (
-                  <p className="text-error font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium font-bold">Next Due Date: {nextDueDateStr}</p>
-                )}
               </div>
             </div>
 
@@ -266,9 +479,9 @@ function StatementPreview() {
               </div>
               <div className="space-y-[4px]">
                 <p className="text-on-surface-variant font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium uppercase tracking-wider">Net Balance</p>
-                <p className="font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold font-bold text-on-surface">{formatCurrencyFull(netBalance)}</p>
+                <p className="font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold font-bold text-on-surface">{formatCurrencyFull(netBalance < 0 ? 0 : netBalance)}</p>
                 {netBalance > 0 && (
-                  <button onClick={handleShareWhatsApp} className="mt-2 flex items-center gap-1 px-2 py-1 bg-secondary-container text-on-secondary-container rounded-full text-[10px] font-bold uppercase tracking-tighter hover:brightness-110 active:scale-95 transition-all no-print">
+                  <button onClick={handleShare} className="mt-2 flex items-center gap-1 px-2 py-1 bg-secondary-container text-on-secondary-container rounded-full text-[10px] font-bold uppercase tracking-tighter hover:brightness-110 active:scale-95 transition-all no-print">
                     <span className="material-symbols-outlined text-[14px]">chat</span>
                     WhatsApp Reminder
                   </button>
@@ -345,13 +558,13 @@ function StatementPreview() {
 
       {/* Fixed Bottom Actions */}
       <div className="fixed bottom-0 left-0 w-full bg-surface p-[16px] flex flex-col gap-[12px] border-t border-outline-variant shadow-[0_-4px_16px_rgba(0,0,0,0.04)] z-50 no-print">
-        <button onClick={handleShareWhatsApp} className="w-full px-[24px] py-[12px] bg-primary text-on-primary rounded-full font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold flex items-center justify-center gap-2 shadow-md hover:brightness-110 active:scale-95 transition-all">
+        <button onClick={handleShare} className="w-full px-[24px] py-[12px] bg-primary text-on-primary rounded-full font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold flex items-center justify-center gap-2 shadow-md hover:brightness-110 active:scale-95 transition-all">
           <span className="material-symbols-outlined">share</span>
           Share on WhatsApp
         </button>
-        <button onClick={() => window.print()} className="w-full px-[24px] py-[12px] bg-surface-container-high border border-outline text-on-surface-variant rounded-full font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold flex items-center justify-center gap-2 hover:bg-surface-container-highest active:scale-95 transition-all">
-          <span className="material-symbols-outlined">print</span>
-          Print Statement
+        <button onClick={handleDownloadPDF} className="w-full px-[24px] py-[12px] bg-surface-container-high border border-outline text-on-surface-variant rounded-full font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold flex items-center justify-center gap-2 hover:bg-surface-container-highest active:scale-95 transition-all">
+          <span className="material-symbols-outlined">picture_as_pdf</span>
+          Download PDF
         </button>
       </div>
     </div>

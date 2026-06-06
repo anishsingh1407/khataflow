@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getCustomers, addTransaction, updateCustomerBalance } from "@/lib/firestore-service";
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatPhoneNumber } from "@/lib/utils";
 import { Customer } from "@/lib/types";
 
 export default function AddPaymentPage() {
@@ -135,11 +135,13 @@ export default function AddPaymentPage() {
     }
   };
 
-  const filteredCustomers = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
-  );
+  const filteredCustomers = customers.filter((c) => {
+    const query = searchQuery.toLowerCase().trim();
+    return (
+      c.name.toLowerCase().includes(query) ||
+      c.phone.toLowerCase().includes(query)
+    );
+  });
 
   const selectedCustObj = customers.find((c) => c.id === selectedCustomer);
 
@@ -173,7 +175,7 @@ export default function AddPaymentPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-[14px]">{selectedCustObj?.name}</p>
-                  <p className="text-[12px] opacity-80">{selectedCustObj?.phone}</p>
+                  <p className="text-[12px] opacity-80">{formatPhoneNumber(selectedCustObj?.phone || "")}</p>
                 </div>
               </div>
               <button
@@ -205,7 +207,7 @@ export default function AddPaymentPage() {
               <div className="flex gap-[12px] overflow-x-auto no-scrollbar pb-1">
                 {filteredCustomers.length === 0 ? (
                   <p className="text-[12px] italic text-on-surface-variant py-4 px-2">
-                    No matching customers found.
+                    No customers found.
                   </p>
                 ) : (
                   filteredCustomers.map((c) => {

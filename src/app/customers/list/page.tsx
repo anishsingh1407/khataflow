@@ -21,6 +21,7 @@ export default function CustomerListPage() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [shopName, setShopName] = useState("Loading shop...");
+  const [ownerName, setOwnerName] = useState("Owner");
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -44,7 +45,9 @@ export default function CustomerListPage() {
         const shopDocRef = doc(db, "shops", shopId);
         const shopSnap = await getDoc(shopDocRef);
         if (shopSnap.exists()) {
-          setShopName(shopSnap.data().name || "My General Store");
+          const shopData = shopSnap.data();
+          setShopName(shopData.name || "My General Store");
+          setOwnerName(shopData.ownerName || "Owner");
         }
 
         // 2. Fetch Customers
@@ -60,15 +63,25 @@ export default function CustomerListPage() {
     loadCustomersData();
   }, [shopId, authLoading, user, router]);
 
+  const handleSendReminder = (customerName: string, phone: string, balance: number) => {
+    const message = `Namaste ${customerName} ji 🙏\nAapka ${shopName} mein ₹${balance} udhar pending hai.\nKripya jald settlement karein.\n- ${ownerName}`;
+    const cleanPhone = phone.replace(/\D/g, "");
+    const last10 = cleanPhone.slice(-10);
+    window.open(`https://wa.me/91${last10}?text=${encodeURIComponent(message)}`, "_blank");
+  };
+
   const isDataLoading = authLoading || loading;
 
   const totalOutstanding = customers.reduce((sum, c) => sum + (c.balance || 0), 0);
 
-  const filteredCustomers = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
-  );
+  const filteredCustomers = customers.filter((c) => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+    return (
+      c.name.toLowerCase().includes(query) ||
+      c.phone.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <div className="bg-background text-on-background min-h-screen">
@@ -105,6 +118,13 @@ export default function CustomerListPage() {
           </div>
         </div>
 
+        {/* Results count label */}
+        {searchQuery.trim() && (
+          <p className="text-[12px] font-[var(--font-body)] text-on-surface-variant mb-3 px-1">
+            Showing {filteredCustomers.length} of {customers.length} customers
+          </p>
+        )}
+
         {/* Customer List */}
         <div className="flex flex-col gap-[12px]">
           {isDataLoading ? (
@@ -133,6 +153,7 @@ export default function CustomerListPage() {
                 lastUpdated={customer.lastUpdated}
                 avatarColor={customer.avatarColor}
                 href={`/customers/${customer.id}`}
+                onWhatsAppClick={() => handleSendReminder(customer.name, customer.phone, customer.balance)}
               />
             ))
           )}

@@ -179,7 +179,7 @@ export default function OwnerDashboardPage() {
             // Real Data Content
             <>
               {/* Total Pending - Large Card */}
-              <Link href="/reports/recovery" className="col-span-2 p-[16px] rounded-xl bg-primary shadow-sm border border-outline-variant/10 flex flex-col justify-between min-h-[160px]">
+              <Link href="/reports" className="col-span-2 p-[16px] rounded-xl bg-primary shadow-sm border border-outline-variant/10 flex flex-col justify-between min-h-[160px]">
                 <div className="flex justify-between items-start">
                   <p className="text-on-primary/80 font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold">
                     Total Pending

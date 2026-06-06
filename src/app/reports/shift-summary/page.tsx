@@ -21,6 +21,15 @@ export default function ShiftSummaryPage() {
   const [ownerName, setOwnerName] = useState("");
   const [reportDate, setReportDate] = useState("");
 
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [allStaff, setAllStaff] = useState<any[]>([]);
+
+  // Filter states
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const [totalSales, setTotalSales] = useState(0);
   const [collected, setCollected] = useState(0);
   const [pending, setPending] = useState(0);
@@ -32,6 +41,7 @@ export default function ShiftSummaryPage() {
 
   const [performance, setPerformance] = useState<any[]>([]);
 
+  // 1. Fetch raw data once
   useEffect(() => {
     if (authLoading) return;
 
@@ -48,7 +58,7 @@ export default function ShiftSummaryPage() {
     const loadReportData = async () => {
       setLoading(true);
       try {
-        // 1. Fetch shop details
+        // Fetch shop details
         const shopSnap = await getDoc(doc(db, "shops", shopId));
         let fetchedOwnerName = "";
         if (shopSnap.exists()) {
@@ -58,152 +68,30 @@ export default function ShiftSummaryPage() {
           setOwnerName(fetchedOwnerName);
         }
 
-        // 2. Fetch all customers
+        // Fetch all customers
         const custSnap = await getDocs(collection(db, "shops", shopId, "customers"));
         const customersList = custSnap.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         })) as Customer[];
+        setAllCustomers(customersList);
 
-        // 3. Fetch all transactions
+        // Fetch all transactions
         const txnsSnap = await getDocs(collection(db, "shops", shopId, "transactions"));
         const transactionsList = txnsSnap.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         })) as Transaction[];
+        setAllTransactions(transactionsList);
 
-        // 4. Fetch staff members
+        // Fetch staff members
         const staffSnap = await getDocs(collection(db, "shops", shopId, "staff"));
         const staffList = staffSnap.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         })) as any[];
+        setAllStaff(staffList);
 
-        // 5. Set report date (current date formatted)
-        setReportDate(
-          new Date().toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })
-        );
-
-        // 6. Calculate stats
-        // Total Sales = sum of all udhar transactions
-        const salesSum = transactionsList
-          .filter((t) => t.type === "udhar")
-          .reduce((sum, t) => sum + (t.amount || 0), 0);
-        setTotalSales(salesSum);
-
-        // Collected = sum of all payment transactions
-        const collectedSum = transactionsList
-          .filter((t) => t.type === "payment")
-          .reduce((sum, t) => sum + (t.amount || 0), 0);
-        setCollected(collectedSum);
-
-        // Pending = sum of all customer balances
-        const pendingSum = customersList.reduce((sum, c) => sum + (c.balance || 0), 0);
-        setPending(pendingSum);
-
-        // 7. Collection Trend chart = group today's payments by hour
-        const todayDateStr = new Date().toISOString().split("T")[0];
-        const todayPayments = transactionsList.filter(
-          (t) => t.date === todayDateStr && t.type === "payment"
-        );
-
-        const bins = [0, 0, 0, 0, 0, 0];
-        todayPayments.forEach((t) => {
-          const hour = parseInt((t.time || "").split(":")[0]) || 0;
-          if (hour < 10) bins[0] += t.amount || 0;
-          else if (hour < 12) bins[1] += t.amount || 0;
-          else if (hour < 14) bins[2] += t.amount || 0;
-          else if (hour < 16) bins[3] += t.amount || 0;
-          else if (hour < 18) bins[4] += t.amount || 0;
-          else bins[5] += t.amount || 0;
-        });
-
-        const maxVal = Math.max(...bins);
-        const heights = bins.map((v) => {
-          if (maxVal === 0) return "0%";
-          return `${Math.max(8, Math.round((v / maxVal) * 90))}%`;
-        });
-        const labels = ["08 AM", "10 AM", "12 PM", "02 PM", "04 PM", "06 PM"];
-        const values = bins.map((v) => formatCurrency(v));
-        const opacities = [
-          "bg-primary/20",
-          "bg-primary/25",
-          "bg-primary/30",
-          "bg-primary/40",
-          "bg-primary/60",
-          "bg-primary",
-        ];
-
-        setBarHeights(heights);
-        setBarLabels(labels);
-        setBarValues(values);
-        setBarOpacities(opacities);
-
-        // 8. Staff Performance
-        const performanceAgg: Record<string, any> = {};
-
-        // Initialize from staffList
-        staffList.forEach((s) => {
-          performanceAgg[s.id] = {
-            id: s.id,
-            name: s.name,
-            initials: s.initials || s.name.charAt(0).toUpperCase() || "S",
-            entries: 0,
-            newCustomers: 0,
-            amount: 0,
-            avatarColor: s.avatarColor || "bg-surface-container-highest text-on-surface-variant",
-          };
-        });
-
-        // Initialize for owner
-        if (user) {
-          performanceAgg[user.uid] = {
-            id: user.uid,
-            name: fetchedOwnerName || "Owner",
-            initials: (fetchedOwnerName || "Owner").charAt(0).toUpperCase() || "O",
-            entries: 0,
-            newCustomers: 0,
-            amount: 0,
-            avatarColor: "bg-secondary-container text-on-secondary-container",
-          };
-        }
-
-        // Aggregate entries and amount from transactions
-        transactionsList.forEach((t) => {
-          const uid = t.recordedBy || user?.uid || "unknown";
-          if (!performanceAgg[uid]) {
-            performanceAgg[uid] = {
-              id: uid,
-              name: uid === "unknown" ? "System" : "Staff " + uid.slice(0, 4),
-              initials: "S",
-              entries: 0,
-              newCustomers: 0,
-              amount: 0,
-              avatarColor: "bg-surface-container-highest text-on-surface-variant",
-            };
-          }
-          performanceAgg[uid].entries += 1;
-          if (t.type === "payment") {
-            performanceAgg[uid].amount += t.amount || 0;
-          }
-        });
-
-        // Aggregate new customers from customerList
-        customersList.forEach((c) => {
-          const addedBy = (c as any).addedBy || user?.uid;
-          if (addedBy && performanceAgg[addedBy]) {
-            performanceAgg[addedBy].newCustomers += 1;
-          }
-        });
-
-        const sortedPerformance = Object.values(performanceAgg).sort(
-          (a, b) => b.amount - a.amount || b.entries - a.entries
-        );
-        setPerformance(sortedPerformance);
       } catch (err) {
         console.error("Error loading shift summary data:", err);
       } finally {
@@ -213,6 +101,155 @@ export default function ShiftSummaryPage() {
 
     loadReportData();
   }, [shopId, authLoading, user, router]);
+
+  // 2. Compute dynamic stats reactively when filters or transactions change
+  useEffect(() => {
+    // Filter transactions by date range if provided
+    const filteredTxns = allTransactions.filter((t) => {
+      if (startDate && t.date < startDate) return false;
+      if (endDate && t.date > endDate) return false;
+      return true;
+    });
+
+    // Calculate report date string
+    if (startDate || endDate) {
+      const startLbl = startDate
+        ? new Date(startDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "Start Date";
+      const endLbl = endDate
+        ? new Date(endDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "End Date";
+      setReportDate(`${startLbl} - ${endLbl}`);
+    } else {
+      setReportDate(
+        new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      );
+    }
+
+    // Total Sales = sum of all udhar transactions in filtered range
+    const salesSum = filteredTxns
+      .filter((t) => t.type === "udhar")
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    setTotalSales(salesSum);
+
+    // Collected = sum of all payment transactions in filtered range
+    const collectedSum = filteredTxns
+      .filter((t) => t.type === "payment")
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    setCollected(collectedSum);
+
+    // Pending = sum of all customer balances (not filtered by date because current balance is static)
+    const pendingSum = allCustomers.reduce((sum, c) => sum + (c.balance || 0), 0);
+    setPending(pendingSum);
+
+    // Collection Trend chart = group filtered payments by hour
+    const payments = filteredTxns.filter((t) => t.type === "payment");
+
+    const bins = [0, 0, 0, 0, 0, 0];
+    payments.forEach((t) => {
+      const hour = parseInt((t.time || "").split(":")[0]) || 0;
+      if (hour < 10) bins[0] += t.amount || 0;
+      else if (hour < 12) bins[1] += t.amount || 0;
+      else if (hour < 14) bins[2] += t.amount || 0;
+      else if (hour < 16) bins[3] += t.amount || 0;
+      else if (hour < 18) bins[4] += t.amount || 0;
+      else bins[5] += t.amount || 0;
+    });
+
+    const maxVal = Math.max(...bins);
+    const heights = bins.map((v) => {
+      if (maxVal === 0) return "0%";
+      return `${Math.max(8, Math.round((v / maxVal) * 90))}%`;
+    });
+    const labels = ["08 AM", "10 AM", "12 PM", "02 PM", "04 PM", "06 PM"];
+    const values = bins.map((v) => formatCurrency(v));
+    const opacities = [
+      "bg-primary/20",
+      "bg-primary/25",
+      "bg-primary/30",
+      "bg-primary/40",
+      "bg-primary/60",
+      "bg-primary",
+    ];
+
+    setBarHeights(heights);
+    setBarLabels(labels);
+    setBarValues(values);
+    setBarOpacities(opacities);
+
+    // Staff Performance aggregation from filtered transactions
+    const performanceAgg: Record<string, any> = {};
+
+    // Initialize from allStaff
+    allStaff.forEach((s) => {
+      performanceAgg[s.id] = {
+        id: s.id,
+        name: s.name,
+        initials: s.initials || s.name.charAt(0).toUpperCase() || "S",
+        entries: 0,
+        newCustomers: 0,
+        amount: 0,
+        avatarColor: s.avatarColor || "bg-surface-container-highest text-on-surface-variant",
+      };
+    });
+
+    // Initialize for owner
+    if (user) {
+      performanceAgg[user.uid] = {
+        id: user.uid,
+        name: ownerName || "Owner",
+        initials: (ownerName || "Owner").charAt(0).toUpperCase() || "O",
+        entries: 0,
+        newCustomers: 0,
+        amount: 0,
+        avatarColor: "bg-secondary-container text-on-secondary-container",
+      };
+    }
+
+    filteredTxns.forEach((t) => {
+      const uid = t.recordedBy || user?.uid || "unknown";
+      if (!performanceAgg[uid]) {
+        performanceAgg[uid] = {
+          id: uid,
+          name: uid === "unknown" ? "System" : "Staff " + uid.slice(0, 4),
+          initials: "S",
+          entries: 0,
+          newCustomers: 0,
+          amount: 0,
+          avatarColor: "bg-surface-container-highest text-on-surface-variant",
+        };
+      }
+      performanceAgg[uid].entries += 1;
+      if (t.type === "payment") {
+        performanceAgg[uid].amount += t.amount || 0;
+      }
+    });
+
+    allCustomers.forEach((c) => {
+      const addedBy = (c as any).addedBy || user?.uid;
+      if (addedBy && performanceAgg[addedBy]) {
+        performanceAgg[addedBy].newCustomers += 1;
+      }
+    });
+
+    const sortedPerformance = Object.values(performanceAgg).sort(
+      (a, b) => b.amount - a.amount || b.entries - a.entries
+    );
+    setPerformance(sortedPerformance);
+
+  }, [allTransactions, allCustomers, allStaff, startDate, endDate, ownerName, user]);
 
   if (authLoading || loading) {
     return (
@@ -237,8 +274,8 @@ export default function ShiftSummaryPage() {
     );
   }
 
-  // Check if there are no transactions today for collection trend chart
-  const hasTodayPayments = barValues.some((val) => val !== formatCurrency(0));
+  // Check if there are payment transactions inside the selected range
+  const hasPayments = barValues.some((val) => val !== formatCurrency(0));
 
   return (
     <div className="bg-background text-on-surface min-h-screen pb-32">
@@ -267,19 +304,60 @@ export default function ShiftSummaryPage() {
 
       <main className="px-[16px] pt-4 space-y-6 max-w-2xl mx-auto">
         {/* Date Picker Section */}
-        <section className="flex items-center justify-between bg-surface-container-low p-4 rounded-xl border border-outline-variant">
-          <div className="flex flex-col">
-            <span className="font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium text-on-surface-variant">
-              Report Period
-            </span>
-            <span className="font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold text-on-surface">
-              {reportDate}
-            </span>
+        <section className="bg-surface-container-low p-4 rounded-xl border border-outline-variant space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium text-on-surface-variant">
+                Report Period
+              </span>
+              <span className="font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold text-on-surface">
+                {reportDate}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="flex items-center gap-2 bg-surface-container-highest px-4 py-2 rounded-lg text-primary font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold transition-all active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+              {showDatePicker ? "Close" : "Change"}
+            </button>
           </div>
-          <button className="flex items-center gap-2 bg-surface-container-highest px-4 py-2 rounded-lg text-primary font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold transition-all active:scale-95">
-            <span className="material-symbols-outlined">calendar_today</span>
-            Change
-          </button>
+
+          {showDatePicker && (
+            <div className="pt-2 border-t border-outline-variant/30 space-y-3">
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="text-[12px] font-semibold text-on-surface-variant mb-1 block">Start Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary text-on-surface"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[12px] font-semibold text-on-surface-variant mb-1 block">End Date</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary text-on-surface"
+                  />
+                </div>
+              </div>
+              {(startDate || endDate) && (
+                <button
+                  onClick={() => {
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="w-full bg-surface-container-high hover:bg-surface-container-highest text-primary font-semibold text-[13px] py-2 rounded-lg transition-all"
+                >
+                  Reset Filter
+                </button>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Key Stats Cards — Bento Style */}
@@ -295,7 +373,7 @@ export default function ShiftSummaryPage() {
               </h2>
               <p className="font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium mt-2 flex items-center gap-1 text-on-primary-container">
                 <span className="material-symbols-outlined text-[16px]">trending_up</span>
-                Total Udhar issued to date
+                Total Udhar issued in selected period
               </p>
             </div>
             <div className="absolute -right-4 -bottom-4 opacity-10">
@@ -337,14 +415,14 @@ export default function ShiftSummaryPage() {
               Collection Trend
             </h3>
             <span className="text-on-surface-variant font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium">
-              Today's Collections
+              Hourly Collection Summary
             </span>
           </div>
 
-          {!hasTodayPayments ? (
+          {!hasPayments ? (
             <div className="h-40 w-full flex flex-col items-center justify-center border border-dashed border-outline-variant rounded-xl text-on-surface-variant gap-2 bg-surface-container-low">
               <span className="material-symbols-outlined text-[32px] text-outline">analytics</span>
-              <p className="italic font-medium text-[13px]">No collections recorded today</p>
+              <p className="italic font-medium text-[13px]">No data for selected period</p>
             </div>
           ) : (
             <>
@@ -386,7 +464,7 @@ export default function ShiftSummaryPage() {
           <div className="space-y-3">
             {performance.filter((p) => p.entries > 0 || p.amount > 0).length === 0 ? (
               <div className="bg-surface-container-lowest border border-outline-variant/30 p-8 rounded-xl text-center text-on-surface-variant italic">
-                No staff entries recorded yet
+                No data for selected period
               </div>
             ) : (
               performance

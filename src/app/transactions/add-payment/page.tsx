@@ -117,8 +117,16 @@ export default function AddPaymentPage() {
 
       await updateCustomerBalance(shopId, selectedCustomer, newBalance, newStatus);
 
+      // Reset fields upon successful submit
+      const targetCustomer = selectedCustomer;
+      setSelectedCustomer(null);
+      setSearchQuery("");
+      setAmount("");
+      setPaymentMethod("cash");
+      setNotes("");
+
       // 3. Redirect on success
-      router.push(`/customers/${selectedCustomer}`);
+      router.push(`/customers/${targetCustomer}`);
     } catch (err: any) {
       console.error("Error saving payment transaction:", err);
       setError(err.message || "Failed to record payment. Please try again.");
@@ -156,47 +164,89 @@ export default function AddPaymentPage() {
           <label className="font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold text-on-surface mb-3 block">
             Select Customer
           </label>
-          <div className="flex items-center gap-[8px] border border-outline-variant bg-surface-container-lowest rounded-xl px-[16px] h-12 focus-within:border-primary transition-colors mb-3">
-            <span className="material-symbols-outlined text-outline text-[20px]">search</span>
-            <input
-              type="text"
-              placeholder="Search by name or phone..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none focus:outline-none w-full text-[14px] placeholder:text-outline-variant/60"
-            />
-          </div>
-          <div className="flex gap-[12px] overflow-x-auto no-scrollbar pb-1">
-            {filteredCustomers.length === 0 ? (
-              <p className="text-[12px] italic text-on-surface-variant py-4 px-2">
-                No matching customers found.
-              </p>
-            ) : (
-              filteredCustomers.map((c) => {
-                const isSelected = selectedCustomer === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setSelectedCustomer(c.id)}
-                    className={`flex flex-col items-center gap-1 flex-shrink-0 ${
-                      isSelected ? "opacity-100 scale-105" : "opacity-75"
-                    } transition-all`}
-                  >
-                    <div
-                      className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-[18px] border-2 ${
-                        c.avatarColor || "bg-primary/10 text-primary"
-                      } ${isSelected ? "border-primary" : "border-outline-variant"}`}
-                    >
-                      {c.initials}
-                    </div>
-                    <span className="text-[11px] font-medium text-on-surface-variant truncate max-w-[60px]">
-                      {c.name}
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
+          
+          {selectedCustomer ? (
+            <div className="flex items-center justify-between bg-primary-container text-on-primary-container p-4 rounded-xl border border-primary/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-sm">
+                  {selectedCustObj?.initials || "C"}
+                </div>
+                <div>
+                  <p className="font-semibold text-[14px]">{selectedCustObj?.name}</p>
+                  <p className="text-[12px] opacity-80">{selectedCustObj?.phone}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCustomer(null);
+                  setSearchQuery("");
+                }}
+                className="w-8 h-8 rounded-full hover:bg-primary/10 flex items-center justify-center transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Search Input */}
+              <div className="flex items-center gap-[8px] border border-outline-variant bg-surface-container-lowest rounded-xl px-[16px] h-12 focus-within:border-primary transition-colors mb-3">
+                <span className="material-symbols-outlined text-outline text-[20px]">search</span>
+                <input
+                  type="text"
+                  placeholder="Search by name or phone..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-none focus:outline-none w-full text-[14px] placeholder:text-outline-variant/60"
+                />
+              </div>
+
+              {/* Quick avatars list */}
+              <div className="flex gap-[12px] overflow-x-auto no-scrollbar pb-1">
+                {filteredCustomers.length === 0 ? (
+                  <p className="text-[12px] italic text-on-surface-variant py-4 px-2">
+                    No matching customers found.
+                  </p>
+                ) : (
+                  filteredCustomers.map((c) => {
+                    const isSelected = selectedCustomer === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedCustomer(c.id);
+                          setSearchQuery("");
+                        }}
+                        className={`flex flex-col items-center gap-1 flex-shrink-0 ${
+                          isSelected ? "opacity-100 scale-105" : "opacity-75"
+                        } transition-all`}
+                      >
+                        <div
+                          className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-[18px] border-2 ${
+                            c.avatarColor || "bg-primary/10 text-primary"
+                          } ${isSelected ? "border-primary" : "border-outline-variant"}`}
+                        >
+                          {c.initials}
+                        </div>
+                        <span className="text-[11px] font-medium text-on-surface-variant truncate max-w-[60px]">
+                          {c.name}
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+                <button
+                  onClick={() => router.push("/customers/add")}
+                  className="flex flex-col items-center gap-1 flex-shrink-0"
+                >
+                  <div className="w-14 h-14 rounded-full border-2 border-dashed border-primary/40 flex items-center justify-center bg-primary/5">
+                    <span className="material-symbols-outlined text-primary text-[24px]">add</span>
+                  </div>
+                  <span className="text-[11px] font-medium text-primary">New</span>
+                </button>
+              </div>
+            </>
+          )}
         </section>
 
         {/* Amount Input */}

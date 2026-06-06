@@ -353,9 +353,9 @@ export default function SettingsPage() {
 
             <div className="w-full flex flex-col gap-2 mb-6">
               {[
-                { id: "light" as Theme, label: "Light ☀️", icon: "light_mode" },
-                { id: "dark" as Theme, label: "Dark 🌙", icon: "dark_mode" },
-                { id: "system" as Theme, label: "System 💻", icon: "settings_suggest" },
+                { id: "light" as Theme, label: "Light mode", icon: "light_mode" },
+                { id: "dark" as Theme, label: "Dark mode", icon: "dark_mode" },
+                { id: "system" as Theme, label: "System default", icon: "settings_suggest" },
               ].map((opt) => {
                 const isSelected = theme === opt.id;
                 return (

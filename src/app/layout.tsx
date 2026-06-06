@@ -68,18 +68,15 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            try {
-              var theme = localStorage.getItem('kf-theme') || 'light';
-              if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-              } else if (theme === 'system') {
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                  document.documentElement.classList.add('dark');
-                }
-              }
-            } catch(e) {}
-          })();
+          try {
+            const theme = localStorage.getItem('kf-theme');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (theme === 'dark' || (!theme && systemDark)) {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+          } catch (e) {}
         ` }} />
       </head>
       <body className="font-[var(--font-body)] antialiased bg-background text-on-surface transition-colors duration-200">

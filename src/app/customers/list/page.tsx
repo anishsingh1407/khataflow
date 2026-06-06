@@ -95,7 +95,7 @@ function CustomerList() {
 
   return (
     <div className="bg-background text-on-background min-h-screen">
-      <TopAppBar title={filter === "overdue" ? `${shopName} (Overdue)` : shopName} showLogo showSearch />
+      <TopAppBar title={filter === "overdue" ? `${shopName} (Overdue)` : shopName} showLogo />
 
       <main className="pt-14 px-[16px] pb-[100px]">
         {/* Search */}
@@ -160,7 +160,11 @@ function CustomerList() {
                 initials={customer.initials}
                 balance={customer.balance}
                 status={customer.status}
-                lastUpdated={customer.lastUpdated}
+                lastUpdated={
+                  customer.lastUpdated
+                    ? new Date(customer.lastUpdated).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
+                    : ""
+                }
                 avatarColor={customer.avatarColor}
                 href={`/customers/${customer.id}`}
                 onWhatsAppClick={() => handleSendReminder(customer.name, customer.phone, customer.balance)}

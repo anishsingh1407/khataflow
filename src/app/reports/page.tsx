@@ -17,6 +17,8 @@ import { formatCurrency, formatPhoneNumber } from "@/lib/utils";
 import Link from "next/link";
 import { Customer, Transaction } from "@/lib/types";
 import { generatePDF } from "@/app/reports/statement/page";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ActivityItem {
   id: string;
@@ -41,6 +43,7 @@ export default function ReportsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [shopDetails, setShopDetails] = useState<any>(null);
   const [sendingProgress, setSendingProgress] = useState<string | null>(null);
+  const [isGeneratingDailyPDF, setIsGeneratingDailyPDF] = useState(false);
 
   // Raw fetched lists
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
@@ -212,6 +215,150 @@ export default function ReportsDashboardPage() {
     setBarOpacities(opacities);
   }, [allTransactions, allCustomers, startDate, endDate]);
 
+  const generateDailyPDF = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const todayTxns = allTransactions.filter((t) => t.date === today);
+    if (todayTxns.length === 0) {
+      alert("No transactions today to generate report");
+      return;
+    }
+
+    setIsGeneratingDailyPDF(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    try {
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const chronTodayTxns = [...todayTxns].sort((a, b) => {
+        const timeCompare = (a.time || "").localeCompare(b.time || "");
+        return timeCompare;
+      });
+
+      // 1. Header Section
+      doc.setTextColor(27, 94, 32); // #1B5E20
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text(shopDetails?.name || "KhataFlow Shop", 14, 20);
+
+      doc.setTextColor(27, 94, 32);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("DAILY REPORT", 140, 20);
+
+      // 2. Sub-header
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(102, 102, 102);
+      doc.text(`Date: ${today}`, 14, 26);
+      doc.text(`Owner: ${shopDetails?.ownerName || ""}`, 14, 31);
+      doc.text(`Address: ${shopDetails?.address || "Shop Address"}`, 14, 36);
+
+      // Divider Line
+      doc.setDrawColor(200, 200, 200);
+      doc.line(14, 40, 196, 40);
+
+      // 3. Summary Box (4 items in a row)
+      const todayUdharVal = todayTxns
+        .filter((t) => t.type === "udhar")
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+      const todayCollectionVal = todayTxns
+        .filter((t) => t.type === "payment")
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+      const activeCustomersCount = allCustomers.length;
+
+      doc.setFillColor(240, 245, 240);
+      doc.roundedRect(14, 45, 182, 20, 2, 2, "F");
+
+      doc.setTextColor(51, 51, 51);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+
+      doc.text("Today's Udhar", 18, 51);
+      doc.text("Today's Collection", 63, 51);
+      doc.text("Net Pending", 109, 51);
+      doc.text("Active Customers", 154, 51);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text(`Rs. ${todayUdharVal}`, 18, 59);
+      doc.text(`Rs. ${todayCollectionVal}`, 63, 59);
+      doc.text(`Rs. ${pending}`, 109, 59);
+      doc.text(`${activeCustomersCount}`, 154, 59);
+
+      // 4. Table data using autoTable
+      const tableRows = chronTodayTxns.map((txn) => {
+        const cust = allCustomers.find((c) => c.id === txn.customerId);
+        const custName = cust ? cust.name : "Unknown";
+        const debit = txn.type === "payment" ? `Rs. ${txn.amount}` : "-";
+        const credit = txn.type === "udhar" ? `Rs. ${txn.amount}` : "-";
+
+        let timeStr = txn.time || "";
+        if (timeStr) {
+          const parts = timeStr.split(":");
+          if (parts.length >= 2) {
+            let hour = parseInt(parts[0], 10);
+            const minute = parts[1];
+            const ampm = hour >= 12 ? "PM" : "AM";
+            hour = hour % 12;
+            if (hour === 0) hour = 12;
+            timeStr = `${hour}:${minute} ${ampm}`;
+          }
+        }
+
+        return [
+          timeStr,
+          custName,
+          txn.description || "-",
+          debit,
+          credit,
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 72,
+        head: [["Time", "Customer", "Particulars / Items", "Debit (Rs.)", "Credit (Rs.)"]],
+        body: tableRows,
+        theme: "grid",
+        headStyles: {
+          fillColor: [27, 94, 32],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+        },
+        columnStyles: {
+          3: { halign: "right" },
+          4: { halign: "right" },
+        },
+      });
+
+      // 5. Footer
+      const finalY = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.setFont("helvetica", "italic");
+      doc.text(`Generated by KhataFlow | ${shopName} | ${today}`, 14, finalY);
+
+      doc.save(`Daily-Report-${today}.pdf`);
+    } catch (err) {
+      console.error("Error generating daily PDF report:", err);
+      alert("Failed to generate PDF report");
+    } finally {
+      setIsGeneratingDailyPDF(false);
+    }
+  };
+
   const handleSendAll = async () => {
     const targets = allCustomers.filter((c) => (c.balance || 0) > 0);
     if (targets.length === 0) return;
@@ -370,12 +517,24 @@ export default function ReportsDashboardPage() {
         <main className="px-[16px] pt-4 space-y-6 max-w-2xl mx-auto">
           {/* Header */}
           <section className="flex flex-col gap-[4px]">
-            <h2 className="font-[var(--font-heading)] text-[28px] leading-[36px] font-semibold text-on-surface">
-              Business Reports
-            </h2>
-            <p className="font-[var(--font-body)] text-[14px] leading-[20px] text-on-surface-variant">
-              Live statistics and customer credit analytics
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="font-[var(--font-heading)] text-[28px] leading-[36px] font-semibold text-on-surface">
+                  Business Reports
+                </h2>
+                <p className="font-[var(--font-body)] text-[14px] leading-[20px] text-on-surface-variant">
+                  Live statistics and customer credit analytics
+                </p>
+              </div>
+              <button
+                onClick={generateDailyPDF}
+                disabled={isGeneratingDailyPDF}
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-primary text-on-primary rounded-xl font-semibold text-[13px] hover:brightness-110 active:scale-95 transition-all shadow disabled:opacity-50 disabled:active:scale-100"
+              >
+                <span className="material-symbols-outlined text-[16px]">download</span>
+                {isGeneratingDailyPDF ? "Generating..." : "Download Daily PDF Report"}
+              </button>
+            </div>
           </section>
 
           {/* Report Period Filter Section */}

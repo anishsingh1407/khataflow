@@ -79,7 +79,7 @@ export default function RootLayout({
           } catch (e) {}
         ` }} />
       </head>
-      <body className="font-[var(--font-body)] antialiased bg-background text-on-background text-on-surface transition-colors duration-200">
+      <body className="font-[var(--font-body)] antialiased bg-background text-on-surface transition-colors duration-200">
         <ThemeProvider>
           <AuthProvider>
             {children}

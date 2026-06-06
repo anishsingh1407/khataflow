@@ -3,8 +3,12 @@
 import BottomNav from "@/components/layout/bottom-nav";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme, Theme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
+import { formatPhoneNumber } from "@/lib/utils";
 
 interface SettingsItem {
   icon: string;
@@ -157,9 +161,26 @@ function SettingsGroup({
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAuth();
+  const shopId = user?.shopId;
+
+  const [staffCount, setStaffCount] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isThemeSheetOpen, setIsThemeSheetOpen] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState("");
+
+  useEffect(() => {
+    if (!shopId) return;
+    const fetchStaffCount = async () => {
+      try {
+        const staffSnap = await getDocs(collection(db, "shops", shopId, "staff"));
+        setStaffCount(staffSnap.size);
+      } catch (err) {
+        console.error("Error fetching staff count:", err);
+      }
+    };
+    fetchStaffCount();
+  }, [shopId]);
 
   const themeLabel = theme === "dark" ? "Dark mode" : theme === "light" ? "Light mode" : "System default";
 
@@ -178,6 +199,24 @@ export default function SettingsPage() {
       setIsModalOpen(true);
     }
   };
+
+  const dynamicProfileSection = [
+    {
+      icon: "store",
+      label: "Shop Profile",
+      description: "Business name, address, UPI details",
+      href: "/setup",
+      iconBg: "bg-primary-container text-on-primary-container",
+    },
+    {
+      icon: "group",
+      label: "Staff Management",
+      description: "Add, remove, and manage staff access",
+      href: "/settings/staff",
+      iconBg: "bg-secondary-container text-on-secondary-container",
+      badge: staffCount !== null && staffCount > 0 ? `${staffCount}` : undefined,
+    },
+  ];
 
   return (
     <div className="bg-background text-on-surface min-h-screen pb-24">
@@ -199,14 +238,14 @@ export default function SettingsPage() {
           <div className="bg-primary p-[20px] rounded-2xl text-on-primary shadow-md">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-14 h-14 rounded-full bg-on-primary/20 flex items-center justify-center font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold">
-                RS
+                {user?.name ? user.name.trim().substring(0, 2).toUpperCase() : "O"}
               </div>
               <div>
                 <h2 className="font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold">
-                  Ramesh
+                  {user?.name || "Owner"}
                 </h2>
                 <p className="text-on-primary/80 font-[var(--font-body)] text-[14px] leading-[20px]">
-                  +91 98765 43210
+                  {user?.phone ? formatPhoneNumber(user.phone) : ""}
                 </p>
               </div>
             </div>
@@ -227,7 +266,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <SettingsGroup title="Shop & Team" items={profileSection} onItemClick={handleItemClick} />
+        <SettingsGroup title="Shop & Team" items={dynamicProfileSection} onItemClick={handleItemClick} />
         <SettingsGroup title="General" items={dynamicGeneralSection} onItemClick={handleItemClick} />
         <SettingsGroup title="Data & Reports" items={dataSection} onItemClick={handleItemClick} />
         <SettingsGroup title="Support" items={supportSection} onItemClick={handleItemClick} />
@@ -235,7 +274,14 @@ export default function SettingsPage() {
         {/* Logout */}
         <section className="mb-[32px]">
           <button
-            onClick={() => router.push("/login")}
+            onClick={async () => {
+              try {
+                await signOut();
+              } catch (e) {
+                console.error("Signout error:", e);
+              }
+              router.push("/login");
+            }}
             className="w-full bg-error-container text-on-error-container p-[16px] rounded-2xl font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold flex items-center justify-center gap-2 hover:brightness-95 active:scale-[0.98] transition-all"
           >
             <span className="material-symbols-outlined">logout</span>

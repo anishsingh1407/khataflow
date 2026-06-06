@@ -165,7 +165,7 @@ html {
 
 body {
   font-family: var(--font-body);
-  background-color: var(--color-surface);
+  background-color: var(--color-background);
   color: var(--color-on-surface);
   min-height: 100dvh;
 }
@@ -242,19 +242,18 @@ body {
 
 /* ── Dark Mode Variables ── */
 .dark {
-  --color-background: #0f0f0f;
-  --color-surface: #1a1a1a;
-  --color-surface-variant: #2a2a2a;
-  --color-on-surface: #e0e0e0;
-  --color-on-surface-variant: #a0a0a0;
-  --color-border: #333333;
-  --color-border-secondary: #2a2a2a;
-
-  /* Sourced MD3 outlines and background overlays */
+  --color-background: #121212;
+  --color-surface: #1e1e1e;
+  --color-surface-variant: #2c2c2c;
   --color-on-background: #e0e0e0;
-  --color-outline: #333333;
-  --color-outline-variant: #2a2a2a;
+  --color-on-surface: #e0e0e0;
+  --color-on-surface-variant: #aaaaaa;
+  --color-border: #333333;
 
+  /* Additional containers for consistency */
+  --color-border-secondary: #2a2a2a;
+  --color-outline: #333333;
+  --color-outline-variant: #2c2c2c;
   --color-surface-container-lowest: #121212;
   --color-surface-container-low: #1e1e1e;
   --color-surface-container: #242424;

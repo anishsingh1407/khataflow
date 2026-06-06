@@ -114,12 +114,12 @@ export function generatePDF({
 
   doc.setFont("helvetica", "normal");
   doc.setTextColor(211, 47, 47); // red
-  doc.text(`₹${totalUdhar}`, 160, 55);
+  doc.text(`Rs. ${totalUdhar}`, 160, 55);
   doc.setTextColor(46, 125, 50); // green
-  doc.text(`₹${totalPaid}`, 160, 60);
+  doc.text(`Rs. ${totalPaid}`, 160, 60);
   doc.setTextColor(27, 94, 32); // deep green
   doc.setFont("helvetica", "bold");
-  doc.text(`₹${netBalance < 0 ? 0 : netBalance}`, 160, 65);
+  doc.text(`Rs. ${netBalance < 0 ? 0 : netBalance}`, 160, 65);
 
   // 4. Table data using autoTable
   let currentRunning = 0;
@@ -131,15 +131,15 @@ export function generatePDF({
     return [
       formattedDate,
       t.description || (t.type === "udhar" ? "Udhar Given" : "Payment Received"),
-      debit > 0 ? `₹${debit}` : "-",
-      credit > 0 ? `₹${credit}` : "-",
-      `₹${currentRunning}`,
+      debit > 0 ? `Rs. ${debit}` : "-",
+      credit > 0 ? `Rs. ${credit}` : "-",
+      `Rs. ${currentRunning}`,
     ];
   });
 
   autoTable(doc, {
     startY: 75,
-    head: [["Date", "Particulars", "Debit (₹)", "Credit (₹)", "Balance (₹)"]],
+    head: [["Date", "Particulars", "Debit (Rs.)", "Credit (Rs.)", "Balance (Rs.)"]],
     body: tableData,
     theme: "grid",
     headStyles: {

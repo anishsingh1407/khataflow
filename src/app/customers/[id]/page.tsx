@@ -272,29 +272,30 @@ export default function CustomerLedgerPage() {
               </div>
 
               {/* Financial Summary Balance */}
-              <div className={`p-[24px] rounded-xl flex justify-between items-center ${
-                currentBalance > 0 ? "bg-error-container" : "bg-primary-container/20"
-              }`}>
+              <div
+                className="p-[24px] rounded-xl flex justify-between items-center"
+                style={currentBalance > 0 ? { backgroundColor: '#fce4ec' } : { backgroundColor: '#e8f5e9' }}
+              >
                 <div>
                   <h3 className={`font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold mb-1 ${
-                    currentBalance > 0 ? "text-on-error-container" : "text-primary"
+                    currentBalance > 0 ? "text-[#880e4f]" : "text-[#1B5E20]"
                   }`}>
                     Current Balance
                   </h3>
                   <p className={`font-[var(--font-heading)] text-[32px] leading-[40px] tracking-[-0.02em] font-bold ${
-                    currentBalance > 0 ? "text-error" : "text-primary"
+                    currentBalance > 0 ? "text-[#d32f2f]" : "text-[#1B5E20]"
                   }`}>
                     {formatCurrency(currentBalance)}
                   </p>
                 </div>
                 <div className="flex flex-col items-end">
                   <span className={`font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium uppercase mb-2 ${
-                    currentBalance > 0 ? "text-on-error-container" : "text-primary"
+                    currentBalance > 0 ? "text-[#880e4f]" : "text-[#1B5E20]"
                   }`}>
                     {currentBalance > 0 ? "Udhar Due" : "Settled"}
                   </span>
                   <span className={`material-symbols-outlined text-[40px] ${
-                    currentBalance > 0 ? "text-error" : "text-primary"
+                    currentBalance > 0 ? "text-[#d32f2f]" : "text-[#1B5E20]"
                   }`} style={{ fontVariationSettings: "'FILL' 1" }}>
                     {currentBalance > 0 ? "trending_up" : "check_circle"}
                   </span>

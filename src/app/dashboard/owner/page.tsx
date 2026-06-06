@@ -214,7 +214,7 @@ export default function OwnerDashboardPage() {
             // Real Data Content
             <>
               {/* Total Pending - Large Card */}
-              <Link href="/reports" className="col-span-2 p-[16px] rounded-xl bg-primary shadow-sm border border-outline-variant/10 flex flex-col justify-between min-h-[160px]">
+              <Link href="/reports" className="col-span-2 p-[16px] rounded-xl shadow-sm border border-outline-variant/10 flex flex-col justify-between min-h-[160px]" style={{ backgroundColor: '#1B5E20' }}>
                 <div className="flex justify-between items-start">
                   <p className="text-on-primary/80 font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold">
                     Total Pending
@@ -248,41 +248,41 @@ export default function OwnerDashboardPage() {
               </Link>
 
               {/* Collection */}
-              <div className="p-[16px] rounded-xl bg-secondary-container shadow-sm border border-outline-variant/30 flex flex-col justify-between">
-                <p className="text-on-secondary-container font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium">
+              <div className="p-[16px] rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between" style={{ backgroundColor: '#e8f5e9' }}>
+                <p className="text-[#1B5E20] font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium">
                   Collection
                 </p>
                 <div className="flex items-baseline gap-[4px]">
-                  <span className="font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold text-on-secondary-container">
+                  <span className="font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold text-[#1B5E20]">
                     {formatCurrency(todaysCollection)}
                   </span>
-                  <span className="material-symbols-outlined text-secondary text-[18px]">payments</span>
+                  <span className="material-symbols-outlined text-[#4CAF50] text-[18px]">payments</span>
                 </div>
               </div>
 
               {/* Today's Udhar */}
-              <div className="col-span-2 p-[16px] rounded-xl bg-error-container shadow-sm border border-outline-variant/30 flex flex-col justify-between">
+              <div className="col-span-2 p-[16px] rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between" style={{ backgroundColor: '#fce4ec' }}>
                 <div className="flex justify-between items-center">
-                  <p className="text-on-error-container font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium">
+                  <p className="text-[#880e4f] font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium">
                     Today&apos;s Udhar
                   </p>
-                  <span className="material-symbols-outlined text-error text-[18px]">history_edu</span>
+                  <span className="material-symbols-outlined text-[#d32f2f] text-[18px]">history_edu</span>
                 </div>
-                <h3 className="font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold text-on-error-container">
+                <h3 className="font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold text-[#880e4f]">
                   {formatCurrency(todaysUdhar)}
                 </h3>
               </div>
 
               {/* Growth Insight */}
-              <div className="col-span-2 p-[16px] rounded-xl bg-tertiary-container shadow-sm border border-outline-variant/30 flex items-center gap-[16px]">
-                <div className="w-10 h-10 rounded-full bg-on-tertiary-container/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-on-tertiary-container">insights</span>
+              <div className="col-span-2 p-[16px] rounded-xl shadow-sm border border-outline-variant/30 flex items-center gap-[16px]" style={{ backgroundColor: '#1B5E20' }}>
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white">insights</span>
                 </div>
                 <div>
-                  <p className="text-on-tertiary-container/80 font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium">
+                  <p className="text-white/80 font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium">
                     Growth Insight
                   </p>
-                  <p className="text-on-tertiary-container font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold">
+                  <p className="text-white font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold">
                     {todaysUdhar > 0
                       ? `Today's new credit is ${formatCurrency(todaysUdhar)}.`
                       : "No new credit recorded today."}

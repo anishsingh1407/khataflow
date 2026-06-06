@@ -31,7 +31,7 @@ export default function BottomNav({ items, variant = "owner" }: BottomNavProps) 
   const navItems = items || (variant === "owner" ? ownerNavItems : staffNavItems);
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-[8px] py-[12px] bg-surface shadow-[0_-2px_10px_rgba(0,0,0,0.05)] rounded-t-xl border-t border-outline-variant">
+    <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-[8px] py-[12px] bg-surface shadow-[0_-2px_10px_rgba(0,0,0,0.05)] rounded-t-xl border-t border-outline-variant no-print">
       {navItems.map((item) => {
         let isActive = pathname === item.href;
         if (!isActive) {

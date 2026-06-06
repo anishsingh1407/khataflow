@@ -96,10 +96,16 @@ export default function CustomerLedgerPage() {
 
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col font-[var(--font-body)] text-[14px] leading-[20px]">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white !important; }
+        }
+      `}} />
       {/* Top AppBar */}
       <header className="bg-surface fixed top-0 w-full z-50 flex justify-between items-center px-[16px] h-14 border-b border-outline-variant/10">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.back()} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-high transition-transform active:scale-95">
+          <button onClick={() => router.back()} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-high transition-transform active:scale-95 no-print">
             <span className="material-symbols-outlined text-primary">arrow_back</span>
           </button>
           <div className="flex items-center gap-2">
@@ -111,13 +117,13 @@ export default function CustomerLedgerPage() {
             </h1>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 no-print">
           <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-all">
             <span className="material-symbols-outlined text-primary">notifications</span>
           </button>
-          <Link href="/reports/statement" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-all">
+          <button onClick={() => window.print()} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-all">
             <span className="material-symbols-outlined text-primary">picture_as_pdf</span>
-          </Link>
+          </button>
         </div>
       </header>
 
@@ -305,7 +311,7 @@ export default function CustomerLedgerPage() {
       )}
 
       {/* Sticky Footer Actions */}
-      <footer className="fixed bottom-0 left-0 w-full z-50 bg-surface-container-lowest shadow-[0_-8px_24px_rgba(0,0,0,0.05)] border-t border-outline-variant px-[16px] py-4">
+      <footer className="fixed bottom-0 left-0 w-full z-50 bg-surface-container-lowest shadow-[0_-8px_24px_rgba(0,0,0,0.05)] border-t border-outline-variant px-[16px] py-4 no-print">
         <div className="flex gap-4 max-w-md mx-auto">
           <Link
             href="/transactions/add-udhar"

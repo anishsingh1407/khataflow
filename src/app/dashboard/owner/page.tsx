@@ -10,7 +10,7 @@ import TopAppBar from "@/components/layout/top-app-bar";
 import BottomNav from "@/components/layout/bottom-nav";
 import FAB from "@/components/layout/fab";
 import ActivityItem from "@/components/shared/activity-item";
-import { formatCurrency, formatPhoneNumber } from "@/lib/utils";
+import { formatCurrency, formatPhoneNumber, formatRecentActivityTime } from "@/lib/utils";
 import Link from "next/link";
 import { Customer, Transaction } from "@/lib/types";
 
@@ -326,7 +326,7 @@ export default function OwnerDashboardPage() {
             <h3 className="font-[var(--font-heading)] text-[20px] leading-[28px] font-semibold text-on-surface">
               Overdue Alerts
             </h3>
-            <Link href="/reports/recovery" className="text-primary font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold">
+            <Link href="/customers/list?filter=overdue" className="text-primary font-[var(--font-body)] text-[14px] leading-[20px] tracking-[0.1px] font-semibold">
               View All
             </Link>
           </div>
@@ -393,7 +393,7 @@ export default function OwnerDashboardPage() {
                   <ActivityItem
                     key={txn.id}
                     customerName={customer ? customer.name : "Unknown Customer"}
-                    time={`${txn.date} ${txn.time}`}
+                    time={formatRecentActivityTime(txn.date, txn.time)}
                     amount={txn.amount}
                     type={txn.type}
                     label={txn.description}

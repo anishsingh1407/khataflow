@@ -69,7 +69,7 @@ export default function RootLayout({
         />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
-            const theme = localStorage.getItem('theme');
+            const theme = localStorage.getItem('kf-theme');
             const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             if (theme === 'dark' || (!theme && systemDark)) {
               document.documentElement.classList.add('dark');
@@ -79,7 +79,7 @@ export default function RootLayout({
           } catch (e) {}
         ` }} />
       </head>
-      <body className="font-[var(--font-body)] antialiased bg-background text-on-background transition-colors duration-200">
+      <body className="font-[var(--font-body)] antialiased bg-background text-on-background text-on-surface transition-colors duration-200">
         <ThemeProvider>
           <AuthProvider>
             {children}

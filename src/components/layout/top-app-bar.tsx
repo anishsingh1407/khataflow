@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface TopAppBarProps {
   title: string;
@@ -30,6 +31,7 @@ export default function TopAppBar({
 }: TopAppBarProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -89,20 +91,8 @@ export default function TopAppBar({
         )}
         {rightActions}
         {showProfile && (
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
-            {profileImageUrl ? (
-              <img
-                alt="Profile"
-                className="w-full h-full object-cover"
-                src={profileImageUrl}
-              />
-            ) : (
-              <div className="w-full h-full bg-primary-container flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-primary-container text-[16px]">
-                  person
-                </span>
-              </div>
-            )}
+          <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-sm border border-outline-variant">
+            {user?.name ? user.name.trim().charAt(0).toUpperCase() : "O"}
           </div>
         )}
       </div>

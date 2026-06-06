@@ -10,9 +10,9 @@ import { formatCurrencyFull, formatPhoneNumber } from "@/lib/utils";
 import Link from "next/link";
 import { Customer, Transaction } from "@/lib/types";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
-export function generateStatementPDF({
+export function generatePDF({
   customer,
   transactions,
   shopDetails,
@@ -137,7 +137,7 @@ export function generateStatementPDF({
     ];
   });
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: 75,
     head: [["Date", "Particulars", "Debit (₹)", "Credit (₹)", "Balance (₹)"]],
     body: tableData,
@@ -355,11 +355,9 @@ function StatementPreview() {
   const handleShare = async () => {
     if (!selectedCustomer) return;
     try {
-      const now = new Date();
-      const currentMonthName = now.toLocaleString("en-US", { month: "long" });
-      const currentYear = now.getFullYear();
-      const fileName = `${selectedCustomer.name}-${currentMonthName}-${currentYear}-statement.pdf`;
-      const doc = generateStatementPDF({
+      const customerName = selectedCustomer.name;
+      const fileName = `${customerName}-statement.pdf`;
+      const doc = generatePDF({
         customer: selectedCustomer,
         transactions,
         shopDetails,
@@ -373,8 +371,8 @@ function StatementPreview() {
           files: [new File([new Blob()], "a.pdf", { type: "application/pdf" })],
         })
       ) {
-        const blob = doc.output("blob");
-        const file = new File([blob], fileName, { type: "application/pdf" });
+        const pdfBlob = doc.output("blob");
+        const file = new File([pdfBlob], fileName, { type: "application/pdf" });
         await navigator.share({
           title: "Account Statement",
           text: `Hello ${selectedCustomer.name}, please find your statement for ${shopDetails?.name || "our shop"}. Total pending outstanding balance is ₹${selectedCustomer.balance || 0}.`,
@@ -400,16 +398,13 @@ function StatementPreview() {
 
   const handleDownloadPDF = () => {
     if (!selectedCustomer) return;
-    const now = new Date();
-    const currentMonthName = now.toLocaleString("en-US", { month: "long" });
-    const currentYear = now.getFullYear();
-    const fileName = `${selectedCustomer.name}-${currentMonthName}-${currentYear}-statement.pdf`;
-    const doc = generateStatementPDF({
+    const customerName = selectedCustomer.name;
+    const doc = generatePDF({
       customer: selectedCustomer,
       transactions,
       shopDetails,
     });
-    doc.save(fileName);
+    doc.save(`${customerName}-statement.pdf`);
   };
 
   return (

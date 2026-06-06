@@ -10,7 +10,7 @@ import TimelineItem from "@/components/shared/timeline-item";
 import { formatCurrency, formatPhoneNumber, formatDateFriendly, formatTime12H } from "@/lib/utils";
 import Link from "next/link";
 import { Customer, Transaction } from "@/lib/types";
-import { generateStatementPDF } from "@/app/reports/statement/page";
+import { generatePDF } from "@/app/reports/statement/page";
 
 export default function CustomerLedgerPage() {
   const router = useRouter();
@@ -111,9 +111,10 @@ export default function CustomerLedgerPage() {
       const monthStr = pickerDate.toISOString().substring(0, 7); // YYYY-MM
       const filteredTxns = transactions.filter((t) => t.date && t.date.startsWith(monthStr));
       const periodLabel = pickerDate.toLocaleString("en-US", { month: "long", year: "numeric" });
-      const fileName = `${customer.name}-${periodLabel.replace(/\s+/g, "-")}-statement.pdf`;
+      const customerName = customer.name;
+      const fileName = `${customerName}-statement.pdf`;
 
-      const doc = generateStatementPDF({
+      const doc = generatePDF({
         customer,
         transactions: filteredTxns,
         shopDetails,
@@ -129,8 +130,8 @@ export default function CustomerLedgerPage() {
           files: [new File([new Blob()], "a.pdf", { type: "application/pdf" })],
         })
       ) {
-        const blob = doc.output("blob");
-        const file = new File([blob], fileName, { type: "application/pdf" });
+        const pdfBlob = doc.output("blob");
+        const file = new File([pdfBlob], `${customerName}-statement.pdf`, { type: "application/pdf" });
         await navigator.share({
           title: "Account Statement",
           text: `Hello ${customer.name}, please find your statement for ${shopDetails?.name || "our shop"} for ${periodLabel}.`,

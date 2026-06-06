@@ -10,6 +10,7 @@ export interface UserProfile {
   phone: string;
   role: "owner" | "staff" | "admin";
   shopId: string;
+  name?: string;
 }
 
 interface AuthContextType {
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 phone: firebaseUser.phoneNumber || "",
                 role: data.role,
                 shopId: data.shopId,
+                name: data.name,
               });
               document.cookie = "kf-auth-token=true; path=/; max-age=3600";
             } else {

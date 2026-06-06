@@ -16,7 +16,7 @@ import BottomNav from "@/components/layout/bottom-nav";
 import { formatCurrency, formatPhoneNumber } from "@/lib/utils";
 import Link from "next/link";
 import { Customer, Transaction } from "@/lib/types";
-import { generateStatementPDF } from "@/app/reports/statement/page";
+import { generatePDF } from "@/app/reports/statement/page";
 
 interface ActivityItem {
   id: string;
@@ -225,15 +225,15 @@ export default function ReportsDashboardPage() {
         (t) => t.customerId === customer.id && t.date && t.date.startsWith(currentMonthStr)
       );
 
-      const doc = generateStatementPDF({
+      const customerName = customer.name;
+      const fileName = `${customerName}-statement.pdf`;
+      const doc = generatePDF({
         customer,
         transactions: filteredTxns,
         shopDetails,
         startDateStr: `${currentMonthStr}-01`,
         endDateStr: `${currentMonthStr}-30`,
       });
-
-      const fileName = `${customer.name}-June-2026-statement.pdf`;
 
       if (
         typeof navigator !== "undefined" &&
@@ -244,8 +244,8 @@ export default function ReportsDashboardPage() {
         })
       ) {
         try {
-          const blob = doc.output("blob");
-          const file = new File([blob], fileName, { type: "application/pdf" });
+          const pdfBlob = doc.output("blob");
+          const file = new File([pdfBlob], fileName, { type: "application/pdf" });
           await navigator.share({
             title: "Account Statement",
             text: `Hello ${customer.name}, please find your statement for ${shopName} for June 2026.`,
@@ -274,15 +274,15 @@ export default function ReportsDashboardPage() {
       (t) => t.customerId === customer.id && t.date && t.date.startsWith(currentMonthStr)
     );
 
-    const doc = generateStatementPDF({
+    const customerName = customer.name;
+    const fileName = `${customerName}-statement.pdf`;
+    const doc = generatePDF({
       customer,
       transactions: filteredTxns,
       shopDetails,
       startDateStr: `${currentMonthStr}-01`,
       endDateStr: `${currentMonthStr}-30`,
     });
-
-    const fileName = `${customer.name}-June-2026-statement.pdf`;
 
     if (
       typeof navigator !== "undefined" &&
@@ -293,8 +293,8 @@ export default function ReportsDashboardPage() {
       })
     ) {
       try {
-        const blob = doc.output("blob");
-        const file = new File([blob], fileName, { type: "application/pdf" });
+        const pdfBlob = doc.output("blob");
+        const file = new File([pdfBlob], fileName, { type: "application/pdf" });
         await navigator.share({
           title: "Account Statement",
           text: `Hello ${customer.name}, please find your statement for ${shopName} for June 2026.`,

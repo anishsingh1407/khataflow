@@ -18,7 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("system");
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as Theme | null;
+    const savedTheme = localStorage.getItem("kf-theme") as Theme | null;
     if (savedTheme) {
       setThemeState(savedTheme);
     }
@@ -26,7 +26,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem("theme", newTheme);
+    localStorage.setItem("kf-theme", newTheme);
     
     const root = document.documentElement;
     if (newTheme === "dark") {

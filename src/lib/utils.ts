@@ -46,14 +46,38 @@ export function formatDateFriendly(dateStr: string): string {
     const year = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1;
     const day = parseInt(parts[2], 10);
-    const dateObj = new Date(year, month, day);
-    if (!isNaN(dateObj.getTime())) {
-      return dateObj.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthName = months[month] || "";
+    const dayStr = day < 10 ? `0${day}` : `${day}`;
+    return `${dayStr} ${monthName} ${year}`;
+  }
+  return dateStr;
+}
+
+export function formatRecentActivityTime(dateStr?: string, timeStr?: string): string {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthName = months[month] || "";
+    const dayStr = day < 10 ? `0${day}` : `${day}`;
+    
+    let timeFormatted = "";
+    if (timeStr) {
+      const timeParts = timeStr.split(":");
+      if (timeParts.length >= 2) {
+        let hour = parseInt(timeParts[0], 10);
+        const minute = timeParts[1];
+        const ampm = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12;
+        if (hour === 0) hour = 12;
+        timeFormatted = `, ${hour}:${minute} ${ampm}`;
+      }
     }
+    return `${dayStr} ${monthName}${timeFormatted}`;
   }
   return dateStr;
 }

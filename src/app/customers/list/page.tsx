@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getCustomers } from "@/lib/firestore-service";
 import { doc, getDoc } from "firebase/firestore";
@@ -14,8 +14,11 @@ import CustomerRow from "@/components/shared/customer-row";
 import { formatCurrency } from "@/lib/utils";
 import { Customer } from "@/lib/types";
 
-export default function CustomerListPage() {
+function CustomerList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const filter = searchParams.get("filter") || "";
+
   const { user, loading: authLoading } = useAuth();
   const shopId = user?.shopId;
 
@@ -72,9 +75,16 @@ export default function CustomerListPage() {
 
   const isDataLoading = authLoading || loading;
 
-  const totalOutstanding = customers.reduce((sum, c) => sum + (c.balance || 0), 0);
+  const displayedCustomers = customers.filter((c) => {
+    if (filter === "overdue") {
+      return (c.balance || 0) > 0 && (c.status === "overdue" || c.status === "pending");
+    }
+    return true;
+  });
 
-  const filteredCustomers = customers.filter((c) => {
+  const totalOutstanding = displayedCustomers.reduce((sum, c) => sum + (c.balance || 0), 0);
+
+  const filteredCustomers = displayedCustomers.filter((c) => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
     return (
@@ -85,7 +95,7 @@ export default function CustomerListPage() {
 
   return (
     <div className="bg-background text-on-background min-h-screen">
-      <TopAppBar title={shopName} showLogo showSearch />
+      <TopAppBar title={filter === "overdue" ? `${shopName} (Overdue)` : shopName} showLogo showSearch />
 
       <main className="pt-14 px-[16px] pb-[100px]">
         {/* Search */}
@@ -102,7 +112,7 @@ export default function CustomerListPage() {
         <div className="bg-primary-container rounded-2xl p-[16px] mb-[24px] flex justify-between items-center text-on-primary-container shadow-sm border border-primary/10">
           <div>
             <p className="font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium opacity-90 uppercase tracking-wider">
-              Total Outstanding
+              {filter === "overdue" ? "Overdue Outstanding" : "Total Outstanding"}
             </p>
             <p className="font-[var(--font-heading)] text-[24px] leading-[32px] font-bold mt-1">
               {isDataLoading ? "..." : formatCurrency(totalOutstanding)}
@@ -110,7 +120,7 @@ export default function CustomerListPage() {
           </div>
           <div className="text-right">
             <p className="font-[var(--font-body)] text-[12px] leading-[16px] tracking-[0.5px] font-medium opacity-90">
-              {isDataLoading ? "..." : `${customers.length} Customers`}
+              {isDataLoading ? "..." : `${displayedCustomers.length} Customers`}
             </p>
             <p className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block mt-1">
               Live updates
@@ -121,7 +131,7 @@ export default function CustomerListPage() {
         {/* Results count label */}
         {searchQuery.trim() && (
           <p className="text-[12px] font-[var(--font-body)] text-on-surface-variant mb-3 px-1">
-            Showing {filteredCustomers.length} of {customers.length} customers
+            Showing {filteredCustomers.length} of {displayedCustomers.length} customers
           </p>
         )}
 
@@ -138,7 +148,7 @@ export default function CustomerListPage() {
           ) : filteredCustomers.length === 0 ? (
             // Empty State
             <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-8 text-center text-on-surface-variant italic">
-              {searchQuery ? "No matching customers found." : "No customers yet. Click + to add your first customer."}
+              {searchQuery ? "No matching customers found." : "No customers yet."}
             </div>
           ) : (
             // Customer Rows
@@ -163,5 +173,24 @@ export default function CustomerListPage() {
       <FAB href="/customers/add" icon="add" />
       <BottomNav variant="owner" />
     </div>
+  );
+}
+
+export default function CustomerListPage() {
+  return (
+    <Suspense fallback={
+      <div className="bg-background text-on-background min-h-screen">
+        <header className="fixed top-0 z-50 w-full h-14 bg-surface border-b border-outline-variant/10 flex items-center px-4">
+          <h1 className="font-bold text-lg text-primary">Loading customers...</h1>
+        </header>
+        <main className="pt-20 px-4 space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 bg-surface-container-low animate-pulse rounded-2xl" />
+          ))}
+        </main>
+      </div>
+    }>
+      <CustomerList />
+    </Suspense>
   );
 }

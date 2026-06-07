@@ -218,10 +218,6 @@ export default function ReportsDashboardPage() {
   const generateDailyPDF = async () => {
     const today = new Date().toISOString().split("T")[0];
     const todayTxns = allTransactions.filter((t) => t.date === today);
-    if (todayTxns.length === 0) {
-      alert("No transactions today to generate report");
-      return;
-    }
 
     setIsGeneratingDailyPDF(true);
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -292,33 +288,35 @@ export default function ReportsDashboardPage() {
       doc.text(`${activeCustomersCount}`, 154, 59);
 
       // 4. Table data using autoTable
-      const tableRows = chronTodayTxns.map((txn) => {
-        const cust = allCustomers.find((c) => c.id === txn.customerId);
-        const custName = cust ? cust.name : "Unknown";
-        const debit = txn.type === "payment" ? `Rs. ${txn.amount}` : "-";
-        const credit = txn.type === "udhar" ? `Rs. ${txn.amount}` : "-";
+      const tableRows = todayTxns.length === 0
+        ? [["-", "-", "No transactions recorded today", "-", "-"]]
+        : chronTodayTxns.map((txn) => {
+            const cust = allCustomers.find((c) => c.id === txn.customerId);
+            const custName = cust ? cust.name : "Unknown";
+            const debit = txn.type === "payment" ? `Rs. ${txn.amount}` : "-";
+            const credit = txn.type === "udhar" ? `Rs. ${txn.amount}` : "-";
 
-        let timeStr = txn.time || "";
-        if (timeStr) {
-          const parts = timeStr.split(":");
-          if (parts.length >= 2) {
-            let hour = parseInt(parts[0], 10);
-            const minute = parts[1];
-            const ampm = hour >= 12 ? "PM" : "AM";
-            hour = hour % 12;
-            if (hour === 0) hour = 12;
-            timeStr = `${hour}:${minute} ${ampm}`;
-          }
-        }
+            let timeStr = txn.time || "";
+            if (timeStr) {
+              const parts = timeStr.split(":");
+              if (parts.length >= 2) {
+                let hour = parseInt(parts[0], 10);
+                const minute = parts[1];
+                const ampm = hour >= 12 ? "PM" : "AM";
+                hour = hour % 12;
+                if (hour === 0) hour = 12;
+                timeStr = `${hour}:${minute} ${ampm}`;
+              }
+            }
 
-        return [
-          timeStr,
-          custName,
-          txn.description || "-",
-          debit,
-          credit,
-        ];
-      });
+            return [
+              timeStr,
+              custName,
+              txn.description || "-",
+              debit,
+              credit,
+            ];
+          });
 
       autoTable(doc, {
         startY: 72,
@@ -475,6 +473,9 @@ export default function ReportsDashboardPage() {
 
   const hasPayments = barValues.length > 0 && barValues.some((val) => val !== formatCurrency(0));
 
+  const todayDateStr = new Date().toISOString().split("T")[0];
+  const hasTransactionsToday = allTransactions.some((t) => t.date === todayDateStr);
+
   return (
     <div className="bg-background text-on-surface min-h-screen pb-32">
       {/* Top App Bar */}
@@ -532,7 +533,11 @@ export default function ReportsDashboardPage() {
                 className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-primary text-on-primary rounded-xl font-semibold text-[13px] hover:brightness-110 active:scale-95 transition-all shadow disabled:opacity-50 disabled:active:scale-100"
               >
                 <span className="material-symbols-outlined text-[16px]">download</span>
-                {isGeneratingDailyPDF ? "Generating..." : "Download Daily PDF Report"}
+                {isGeneratingDailyPDF
+                  ? "Generating..."
+                  : hasTransactionsToday
+                  ? "Download Daily PDF Report"
+                  : "Download Report (Empty)"}
               </button>
             </div>
           </section>

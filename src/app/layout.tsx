@@ -67,6 +67,14 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#1B5E20" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="KhataFlow" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             const theme = localStorage.getItem('kf-theme');
@@ -77,6 +85,19 @@ export default function RootLayout({
               document.documentElement.classList.remove('dark');
             }
           } catch (e) {}
+        ` }} />
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js')
+                .then(function(reg) { 
+                  console.log('KhataFlow SW registered:', reg.scope); 
+                })
+                .catch(function(err) { 
+                  console.log('SW registration failed:', err); 
+                });
+            });
+          }
         ` }} />
       </head>
       <body className="font-[var(--font-body)] antialiased bg-background text-on-surface transition-colors duration-200">

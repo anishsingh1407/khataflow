@@ -29,6 +29,9 @@ export default function OwnerDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
   useEffect(() => {
     console.log("Dashboard - user from useAuth:", user);
     console.log("Dashboard - shopId:", user?.shopId);
@@ -122,6 +125,29 @@ export default function OwnerDashboardPage() {
     };
   }, [isSearchOpen]);
 
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setShowInstallBanner(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => {
+      setShowInstallBanner(false);
+      setInstallPrompt(null);
+    });
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      setShowInstallBanner(false);
+    }
+  };
+
   const filteredResults = customers.filter((c) => {
     const queryStr = debouncedQuery.toLowerCase().trim();
     if (!queryStr) return false;
@@ -171,6 +197,55 @@ export default function OwnerDashboardPage() {
       />
 
       <main className="pt-14 px-[16px] pb-[100px] max-w-4xl mx-auto">
+        {/* Install App Banner */}
+        {showInstallBanner && (
+          <div 
+            style={{ 
+              backgroundColor: '#E8F5E9', 
+              border: '1px solid #4CAF50',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="material-symbols-outlined" style={{ color: '#1B5E20' }}>install_mobile</span>
+              <div>
+                <p style={{ fontWeight: '600', color: '#1B5E20', fontSize: '14px', margin: 0 }}>
+                  Install KhataFlow
+                </p>
+                <p style={{ color: '#4CAF50', fontSize: '12px', margin: 0 }}>
+                  Add to home screen for quick access
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => setShowInstallBanner(false)}
+                style={{ 
+                  background: 'none', border: 'none', color: '#666', 
+                  fontSize: '12px', cursor: 'pointer', padding: '4px 8px'
+                }}
+              >
+                Later
+              </button>
+              <button 
+                onClick={handleInstall}
+                style={{ 
+                  backgroundColor: '#1B5E20', color: 'white', border: 'none',
+                  borderRadius: '8px', padding: '6px 14px', fontSize: '12px',
+                  cursor: 'pointer', fontWeight: '600'
+                }}
+              >
+                Install
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Greeting */}
         <section className="py-[16px]">
           <h2 className="font-[var(--font-heading)] text-[24px] leading-[32px] font-semibold text-on-surface">

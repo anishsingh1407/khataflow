@@ -165,8 +165,8 @@ html {
 
 body {
   font-family: var(--font-body);
-  background-color: var(--color-background);
-  color: var(--color-on-surface);
+  background-color: var(--color-background) !important;
+  color: var(--color-on-surface) !important;
   min-height: 100dvh;
 }
 
@@ -242,23 +242,23 @@ body {
 
 /* ── Dark Mode Variables ── */
 .dark {
-  --color-background: #121212;
-  --color-surface: #1e1e1e;
-  --color-surface-variant: #2c2c2c;
-  --color-on-background: #e0e0e0;
-  --color-on-surface: #e0e0e0;
-  --color-on-surface-variant: #aaaaaa;
-  --color-border: #333333;
+  --color-background: #121212 !important;
+  --color-surface: #1e1e1e !important;
+  --color-surface-variant: #2c2c2c !important;
+  --color-on-surface: #ffffff !important;
+  --color-on-surface-variant: #aaaaaa !important;
+  --color-border: #333333 !important;
+  --color-border-secondary: #2a2a2a !important;
 
   /* Additional containers for consistency */
-  --color-border-secondary: #2a2a2a;
-  --color-outline: #333333;
-  --color-outline-variant: #2c2c2c;
-  --color-surface-container-lowest: #121212;
-  --color-surface-container-low: #1e1e1e;
-  --color-surface-container: #242424;
-  --color-surface-container-high: #2c2c2c;
-  --color-surface-container-highest: #333333;
+  --color-on-background: #e0e0e0 !important;
+  --color-outline: #333333 !important;
+  --color-outline-variant: #2c2c2c !important;
+  --color-surface-container-lowest: #121212 !important;
+  --color-surface-container-low: #1e1e1e !important;
+  --color-surface-container: #242424 !important;
+  --color-surface-container-high: #2c2c2c !important;
+  --color-surface-container-highest: #333333 !important;
 }
 
 .dark .paper-texture {

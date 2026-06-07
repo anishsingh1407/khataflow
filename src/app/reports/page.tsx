@@ -17,8 +17,6 @@ import { formatCurrency, formatPhoneNumber } from "@/lib/utils";
 import Link from "next/link";
 import { Customer, Transaction } from "@/lib/types";
 import { generatePDF } from "@/app/reports/statement/page";
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface ActivityItem {
   id: string;
@@ -216,142 +214,114 @@ export default function ReportsDashboardPage() {
   }, [allTransactions, allCustomers, startDate, endDate]);
 
   const generateDailyPDF = async () => {
-    const today = new Date().toISOString().split("T")[0];
-    const todayTxns = allTransactions.filter((t) => t.date === today);
-
+    console.log('=== generateDailyPDF called ===');
     setIsGeneratingDailyPDF(true);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
+    
     try {
-      const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
+      console.log('Importing jsPDF...');
+      const jsPDFModule = await import('jspdf');
+      const jsPDF = jsPDFModule.default;
+      console.log('jsPDF imported:', jsPDF);
+      
+      const autoTableModule = await import('jspdf-autotable');
+      const autoTable = autoTableModule.default;
+      console.log('autoTable imported:', autoTable);
+      
+      const doc = new jsPDF('p', 'mm', 'a4');
+      console.log('PDF doc created');
+      
+      const today = new Date();
+      const todayStr = today.toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric'
       });
-
-      const chronTodayTxns = [...todayTxns].sort((a, b) => {
-        const timeCompare = (a.time || "").localeCompare(b.time || "");
-        return timeCompare;
+      
+      // Filter today transactions
+      const todayTxns = (allTransactions || []).filter(t => {
+        if (!t.date) return false;
+        const d = new Date(t.date);
+        return d.toDateString() === today.toDateString();
       });
-
-      // 1. Header Section
-      doc.setTextColor(27, 94, 32); // #1B5E20
-      doc.setFont("helvetica", "bold");
+      console.log('Today transactions:', todayTxns.length);
+      
+      // PDF Header
       doc.setFontSize(22);
-      doc.text(shopDetails?.name || "KhataFlow Shop", 14, 20);
-
       doc.setTextColor(27, 94, 32);
-      doc.setFont("helvetica", "bold");
+      doc.text(shopName || 'My Shop', 14, 20);
+      
       doc.setFontSize(14);
-      doc.text("DAILY REPORT", 140, 20);
-
-      // 2. Sub-header
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(102, 102, 102);
-      doc.text(`Date: ${today}`, 14, 26);
-      doc.text(`Owner: ${shopDetails?.ownerName || ""}`, 14, 31);
-      doc.text(`Address: ${shopDetails?.address || "Shop Address"}`, 14, 36);
-
-      // Divider Line
+      doc.text('DAILY REPORT', 196, 15, { align: 'right' });
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Date: ' + todayStr, 196, 22, { align: 'right' });
+      doc.text('Owner: ' + (user?.name || 'Owner'), 14, 28);
+      
       doc.setDrawColor(200, 200, 200);
-      doc.line(14, 40, 196, 40);
-
-      // 3. Summary Box (4 items in a row)
-      const todayUdharVal = todayTxns
-        .filter((t) => t.type === "udhar")
-        .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-      const todayCollectionVal = todayTxns
-        .filter((t) => t.type === "payment")
-        .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-      const activeCustomersCount = allCustomers.length;
-
-      doc.setFillColor(240, 245, 240);
-      doc.roundedRect(14, 45, 182, 20, 2, 2, "F");
-
-      doc.setTextColor(51, 51, 51);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-
-      doc.text("Today's Udhar", 18, 51);
-      doc.text("Today's Collection", 63, 51);
-      doc.text("Net Pending", 109, 51);
-      doc.text("Active Customers", 154, 51);
-
-      doc.setFont("helvetica", "bold");
+      doc.line(14, 33, 196, 33);
+      
+      // Summary
+      const todayUdhar = todayTxns
+        .filter(t => t.type === 'udhar')
+        .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+      const todayCollection = todayTxns
+        .filter(t => t.type === 'payment')  
+        .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+      const totalPending = (allCustomers || [])
+        .reduce((s, c) => s + (Number(c.balance) || 0), 0);
+      
       doc.setFontSize(10);
-      doc.text(`Rs. ${todayUdharVal}`, 18, 59);
-      doc.text(`Rs. ${todayCollectionVal}`, 63, 59);
-      doc.text(`Rs. ${pending}`, 109, 59);
-      doc.text(`${activeCustomersCount}`, 154, 59);
-
-      // 4. Table data using autoTable
-      const tableRows = todayTxns.length === 0
-        ? [["-", "-", "No transactions recorded today", "-", "-"]]
-        : chronTodayTxns.map((txn) => {
-            const cust = allCustomers.find((c) => c.id === txn.customerId);
-            const custName = cust ? cust.name : "Unknown";
-            const debit = txn.type === "payment" ? `Rs. ${txn.amount}` : "-";
-            const credit = txn.type === "udhar" ? `Rs. ${txn.amount}` : "-";
-
-            let timeStr = txn.time || "";
-            if (timeStr) {
-              const parts = timeStr.split(":");
-              if (parts.length >= 2) {
-                let hour = parseInt(parts[0], 10);
-                const minute = parts[1];
-                const ampm = hour >= 12 ? "PM" : "AM";
-                hour = hour % 12;
-                if (hour === 0) hour = 12;
-                timeStr = `${hour}:${minute} ${ampm}`;
-              }
-            }
-
+      doc.setTextColor(50, 50, 50);
+      doc.text("Today's Udhar: Rs. " + todayUdhar, 14, 42);
+      doc.text("Today's Collection: Rs. " + todayCollection, 85, 42);
+      doc.text('Total Pending: Rs. ' + totalPending, 155, 42);
+      
+      // Table
+      const tableBody = todayTxns.length > 0
+        ? todayTxns.map(t => {
+            const customer = (allCustomers || []).find(c => c.id === t.customerId);
+            const time = t.date ? new Date(t.date).toLocaleTimeString('en-IN', {
+              hour: '2-digit', minute: '2-digit'
+            }) : '-';
+            const items = t.description || 
+              ((t as any).items ? (t as any).items.map((i: any) => i.qty + 'x ' + i.name).join(', ') : '-');
             return [
-              timeStr,
-              custName,
-              txn.description || "-",
-              debit,
-              credit,
+              time,
+              customer?.name || 'Unknown',
+              items,
+              t.type === 'payment' ? 'Rs. ' + t.amount : '-',
+              t.type === 'udhar' ? 'Rs. ' + t.amount : '-',
             ];
-          });
-
+          })
+        : [['-', '-', 'No transactions recorded today', '-', '-']];
+      
       autoTable(doc, {
-        startY: 72,
-        head: [["Time", "Customer", "Particulars / Items", "Debit (Rs.)", "Credit (Rs.)"]],
-        body: tableRows,
-        theme: "grid",
-        headStyles: {
-          fillColor: [27, 94, 32],
+        startY: 50,
+        head: [['Time', 'Customer', 'Items', 'Debit (Rs.)', 'Credit (Rs.)']],
+        body: tableBody,
+        headStyles: { 
+          fillColor: [27, 94, 32], 
           textColor: [255, 255, 255],
-          fontStyle: "bold",
+          fontSize: 9
         },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245],
-        },
-        styles: {
-          fontSize: 9,
-          cellPadding: 3,
-        },
-        columnStyles: {
-          3: { halign: "right" },
-          4: { halign: "right" },
-        },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        styles: { fontSize: 8, cellPadding: 3 },
       });
-
-      // 5. Footer
-      const finalY = (doc as any).lastAutoTable.finalY + 15;
+      
+      // Footer
+      const pageHeight = doc.internal.pageSize.height;
       doc.setFontSize(8);
-      doc.setTextColor(120, 120, 120);
-      doc.setFont("helvetica", "italic");
-      doc.text(`Generated by KhataFlow | ${shopName} | ${today}`, 14, finalY);
-
-      doc.save(`Daily-Report-${today}.pdf`);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Generated by KhataFlow - Manage your business finance efficiently', 14, pageHeight - 10);
+      doc.text(todayStr, 196, pageHeight - 10, { align: 'right' });
+      
+      const filename = 'Daily-Report-' + today.toISOString().split('T')[0] + '.pdf';
+      console.log('Saving PDF as:', filename);
+      doc.save(filename);
+      console.log('PDF saved successfully!');
+      
     } catch (err) {
-      console.error("Error generating daily PDF report:", err);
-      alert("Failed to generate PDF report");
+      console.error('PDF generation error:', err);
+      alert('Error generating PDF: ' + (err as Error).message);
     } finally {
       setIsGeneratingDailyPDF(false);
     }

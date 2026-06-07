@@ -24,14 +24,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem("kf-theme", newTheme);
-    
+  const applyTheme = (targetTheme: Theme) => {
     const root = document.documentElement;
-    if (newTheme === "dark") {
+    if (targetTheme === "dark") {
       root.classList.add("dark");
-    } else if (newTheme === "light") {
+    } else if (targetTheme === "light") {
       root.classList.remove("dark");
     } else {
       const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -43,31 +40,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+    localStorage.setItem("kf-theme", newTheme);
+    applyTheme(newTheme);
+  };
+
   useEffect(() => {
-    const root = document.documentElement;
+    applyTheme(theme);
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     
     const handleChange = () => {
       if (theme === "system") {
-        if (mediaQuery.matches) {
-          root.classList.add("dark");
-        } else {
-          root.classList.remove("dark");
-        }
+        applyTheme("system");
       }
     };
-
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else if (theme === "light") {
-      root.classList.remove("dark");
-    } else {
-      if (mediaQuery.matches) {
-        root.classList.add("dark");
-      } else {
-        root.classList.remove("dark");
-      }
-    }
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
